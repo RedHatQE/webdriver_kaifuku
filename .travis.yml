@@ -1,0 +1,41 @@
+language: python
+python:
+  - '2.7'
+  - '3.6'
+stages:
+- linting
+- test
+- deploy
+
+jobs:
+  include:
+    - stage: deploy
+      python: '3.6'
+      env:
+      install: pip install -U setuptools setuptools_scm
+      script: skip
+      deploy:
+        provider: pypi
+        user: missing
+        password: ~
+        distributions: sdist bdist_wheel
+        skip_upload_docs: true
+        on:
+          tags: true
+    - stage: linting
+      python: '3.6'
+      env:
+      install:
+      - pip install pre-commit
+      - pre-commit install-hooks
+      script:
+      - pre-commit run --all-files
+install:
+  - pip install -U setuptools pip
+  - pip install -U -e . pytest
+script:
+- pytest
+cache:
+  directories:
+    - $HOME/.cache/pip
+    - $HOME/.cache/pre-commit
