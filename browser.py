@@ -1,30 +1,32 @@
 """Core functionality for starting, restarting, and stopping a selenium browser."""
 import atexit
 import json
+import os
 import threading
 import time
+import warnings
 from collections import namedtuple
 from shutil import rmtree
 from string import Template
 from tempfile import mkdtemp
 
-import os
 import requests
-import warnings
 from cached_property import cached_property
+from cfme.fixtures.pytest_store import store, write_line
+from cfme.utils import clear_property_cache, conf, tries
+from cfme.utils.log import logger as log  # TODO remove after artifactor handler
+from cfme.utils.path import data_path
 from selenium import webdriver
-from selenium.common.exceptions import UnexpectedAlertPresentException, WebDriverException
+from selenium.common.exceptions import (
+    UnexpectedAlertPresentException,
+    WebDriverException,
+)
 from selenium.webdriver.common import keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from six.moves.urllib_error import URLError
 from werkzeug.local import LocalProxy
-
-from cfme.fixtures.pytest_store import store, write_line
-from cfme.utils import conf, tries, clear_property_cache
-from cfme.utils.log import logger as log  # TODO remove after artifactor handler
-from cfme.utils.path import data_path
 
 # import logging
 # log = logging.getLogger('cfme.browser')
@@ -41,12 +43,12 @@ def _load_firefox_profile():
     # create a firefox profile using the template in data/firefox_profile.js.template
 
     # Make a new firefox profile dir if it's unset or doesn't exist for some reason
-    firefox_profile_tmpdir = mkdtemp(prefix='firefox_profile_')
+    firefox_profile_tmpdir = mkdtemp(prefix="firefox_profile_")
     log.debug("created firefox profile")
     # Clean up tempdir at exit
     atexit.register(rmtree, firefox_profile_tmpdir, ignore_errors=True)
 
-    template = data_path.join('firefox_profile.js.template').read()
+    template = data_path.join("firefox_profile.js.template").read()
     profile_json = Template(template).substitute(profile_dir=firefox_profile_tmpdir)
     profile_dict = json.loads(profile_json)
 
@@ -73,25 +75,24 @@ class Wharf(object):
         try:
             return json.loads(response.content)
         except ValueError:
-            raise ValueError(
-                "JSON could not be decoded:\n{}".format(response.content))
+            raise ValueError("JSON could not be decoded:\n{}".format(response.content))
 
     def checkout(self):
         if self.docker_id is not None:
             return self.docker_id
-        checkout = self._get('checkout')
+        checkout = self._get("checkout")
         self.docker_id, self.config = next(iter(checkout.items()))
         self._start_renew_thread()
-        log.info('Checked out webdriver container %s', self.docker_id)
+        log.info("Checked out webdriver container %s", self.docker_id)
         log.debug("%r", checkout)
         return self.docker_id
 
     def checkin(self):
         # using dict pop to avoid race conditions
-        my_id = self.__dict__.pop('docker_id', None)
+        my_id = self.__dict__.pop("docker_id", None)
         if my_id:
-            self._get('checkin', my_id)
-            log.info('Checked in webdriver container %s', my_id)
+            self._get("checkin", my_id)
+            log.info("Checked in webdriver container %s", my_id)
             self._renew_thread = None
 
     def _start_renew_thread(self):
@@ -106,15 +107,18 @@ class Wharf(object):
         while True:
             time.sleep(FIVE_MINUTES)
             if self._renew_thread is not threading.current_thread():
-                log.debug("renew done %s is not %s",
-                          self._renew_thread, threading.current_thread())
+                log.debug(
+                    "renew done %s is not %s",
+                    self._renew_thread,
+                    threading.current_thread(),
+                )
                 return
             if self.docker_id is None:
                 log.debug("renew done, docker id %s", self.docker_id)
                 return
-            expiry_info = self._get('renew', self.docker_id)
+            expiry_info = self._get("renew", self.docker_id)
             self.config.update(expiry_info)
-            log.info('Renewed webdriver container %s', self.docker_id)
+            log.info("Renewed webdriver container %s", self.docker_id)
 
     def __nonzero__(self):
         return self.docker_id is not None
@@ -130,12 +134,12 @@ class BrowserFactory(object):
     def _add_missing_options(self):
         if self.webdriver_class is not webdriver.Remote:
             # desired_capabilities is only for Remote driver, but can sneak in
-            self.browser_kwargs.pop('desired_capabilities', None)
-        elif self.browser_kwargs['desired_capabilities']['browserName'] == 'firefox':
-            self.browser_kwargs['browser_profile'] = self._firefox_profile
+            self.browser_kwargs.pop("desired_capabilities", None)
+        elif self.browser_kwargs["desired_capabilities"]["browserName"] == "firefox":
+            self.browser_kwargs["browser_profile"] = self._firefox_profile
 
         if self.webdriver_class is webdriver.Firefox:
-            self.browser_kwargs['firefox_profile'] = self._firefox_profile
+            self.browser_kwargs["firefox_profile"] = self._firefox_profile
 
     @cached_property
     def _firefox_profile(self):
@@ -144,7 +148,7 @@ class BrowserFactory(object):
     def processed_browser_args(self):
         self._add_missing_options()
 
-        if 'keep_alive' in self.browser_kwargs:
+        if "keep_alive" in self.browser_kwargs:
             warnings.warn(
                 "forcing browser keep_alive to False due to selenium bugs\n"
                 "we are aware of the performance cost and hope to redeem",
@@ -156,12 +160,17 @@ class BrowserFactory(object):
     def create(self, url_key):
         try:
             browser = tries(
-                2, WebDriverException,
-                self.webdriver_class, **self.processed_browser_args())
+                2,
+                WebDriverException,
+                self.webdriver_class,
+                **self.processed_browser_args()
+            )
         except URLError as e:
             if e.reason.errno == 111:
                 # Known issue
-                raise RuntimeError('Could not connect to Selenium server. Is it up and running?')
+                raise RuntimeError(
+                    "Could not connect to Selenium server. Is it up and running?"
+                )
             else:
                 # Unknown issue
                 raise
@@ -175,7 +184,7 @@ class BrowserFactory(object):
     def close(self, browser):
         if browser:
             browser.quit()
-            clear_property_cache(self, '_firefox_profile')
+            clear_property_cache(self, "_firefox_profile")
 
 
 class WharfFactory(BrowserFactory):
@@ -183,22 +192,26 @@ class WharfFactory(BrowserFactory):
         super(WharfFactory, self).__init__(webdriver_class, browser_kwargs)
         self.wharf = wharf
 
-        if browser_kwargs.get('desired_capabilities', {}).get('browserName') == 'chrome':
+        if (
+            browser_kwargs.get("desired_capabilities", {}).get("browserName")
+            == "chrome"
+        ):
             # chrome uses containers to sandbox the browser, and we use containers to
             # run chrome in wharf, so disable the sandbox if running chrome in wharf
-            co = browser_kwargs['desired_capabilities'].get('chromeOptions', {})
-            arg = '--no-sandbox'
-            if 'args' not in co:
-                co['args'] = [arg]
-            elif arg not in co['args']:
-                co['args'].append(arg)
-            browser_kwargs['desired_capabilities']['chromeOptions'] = co
+            co = browser_kwargs["desired_capabilities"].get("chromeOptions", {})
+            arg = "--no-sandbox"
+            if "args" not in co:
+                co["args"] = [arg]
+            elif arg not in co["args"]:
+                co["args"].append(arg)
+            browser_kwargs["desired_capabilities"]["chromeOptions"] = co
 
     def processed_browser_args(self):
-        command_executor = self.wharf.config['webdriver_url']
-        view_msg = 'tests can be viewed via vnc on display {}'.format(
-            self.wharf.config['vnc_display'])
-        log.info('webdriver command executor set to %s', command_executor)
+        command_executor = self.wharf.config["webdriver_url"]
+        view_msg = "tests can be viewed via vnc on display {}".format(
+            self.wharf.config["vnc_display"]
+        )
+        log.info("webdriver command executor set to %s", command_executor)
         log.info(view_msg)
         write_line(view_msg, cyan=True)
         return dict(
@@ -207,15 +220,18 @@ class WharfFactory(BrowserFactory):
         )
 
     def create(self, url_key):
-
         def inner():
             try:
                 self.wharf.checkout()
                 return super(WharfFactory, self).create(url_key)
             except URLError as ex:
                 # connection to selenum was refused for unknown reasons
-                log.error('URLError connecting to selenium; recycling container. URLError:')
-                write_line('URLError caused container recycle, see log for details', red=True)
+                log.error(
+                    "URLError connecting to selenium; recycling container. URLError:"
+                )
+                write_line(
+                    "URLError caused container recycle, see log for details", red=True
+                )
                 log.exception(ex)
                 self.wharf.checkin()
                 raise
@@ -240,36 +256,48 @@ class BrowserManager(object):
         self._browser_renew_thread = None
 
     def coerce_url_key(self, key):
-        return key or store.current_appliance.url  # TODO: don't rely on store.current_appliance
+        return (
+            key or store.current_appliance.url
+        )  # TODO: don't rely on store.current_appliance
 
     @classmethod
     def from_conf(cls, browser_conf):
-        webdriver_name = browser_conf.get('webdriver', 'Firefox')
+        webdriver_name = browser_conf.get("webdriver", "Firefox")
         webdriver_class = getattr(webdriver, webdriver_name)
 
-        browser_kwargs = browser_conf.get('webdriver_options', {})
+        browser_kwargs = browser_conf.get("webdriver_options", {})
 
-        if 'webdriver_wharf' in browser_conf:
-            wharf = Wharf(browser_conf['webdriver_wharf'])
+        if "webdriver_wharf" in browser_conf:
+            wharf = Wharf(browser_conf["webdriver_wharf"])
             atexit.register(wharf.checkin)
-            if browser_conf[
-                'webdriver_options'][
-                    'desired_capabilities']['browserName'].lower() == 'firefox':
-                browser_kwargs['desired_capabilities']['marionette'] = False
+            if (
+                browser_conf["webdriver_options"]["desired_capabilities"][
+                    "browserName"
+                ].lower()
+                == "firefox"
+            ):
+                browser_kwargs["desired_capabilities"]["marionette"] = False
             return cls(WharfFactory(webdriver_class, browser_kwargs, wharf))
         else:
             if webdriver_name == "Remote":
-                if browser_conf[
-                        'webdriver_options'][
-                            'desired_capabilities']['browserName'].lower() == 'chrome':
-                    browser_kwargs['desired_capabilities']['chromeOptions'] = {}
-                    browser_kwargs[
-                        'desired_capabilities']['chromeOptions']['args'] = ['--no-sandbox']
-                    browser_kwargs['desired_capabilities'].pop('marionette', None)
-                if browser_conf[
-                        'webdriver_options'][
-                            'desired_capabilities']['browserName'].lower() == 'firefox':
-                    browser_kwargs['desired_capabilities']['marionette'] = False
+                if (
+                    browser_conf["webdriver_options"]["desired_capabilities"][
+                        "browserName"
+                    ].lower()
+                    == "chrome"
+                ):
+                    browser_kwargs["desired_capabilities"]["chromeOptions"] = {}
+                    browser_kwargs["desired_capabilities"]["chromeOptions"]["args"] = [
+                        "--no-sandbox"
+                    ]
+                    browser_kwargs["desired_capabilities"].pop("marionette", None)
+                if (
+                    browser_conf["webdriver_options"]["desired_capabilities"][
+                        "browserName"
+                    ].lower()
+                    == "firefox"
+                ):
+                    browser_kwargs["desired_capabilities"]["marionette"] = False
 
             return cls(BrowserFactory(webdriver_class, browser_kwargs))
 
@@ -287,7 +315,7 @@ class BrowserManager(object):
 
     def ensure_open(self, url_key=None):
         url_key = self.coerce_url_key(url_key)
-        if getattr(self.browser, 'url_key', None) != url_key:
+        if getattr(self.browser, "url_key", None) != url_key:
             return self.start(url_key=url_key)
 
         if self._is_alive():
@@ -318,13 +346,13 @@ class BrowserManager(object):
         try:
             self.factory.close(self.browser)
         except Exception as e:
-            log.error('An exception happened during browser shutdown:')
+            log.error("An exception happened during browser shutdown:")
             log.exception(e)
         finally:
             self.browser = None
 
     def start(self, url_key=None):
-        log.info('starting browser')
+        log.info("starting browser")
         url_key = self.coerce_url_key(url_key)
         if self.browser is not None:
             self.quit()
@@ -332,7 +360,7 @@ class BrowserManager(object):
 
     def open_fresh(self, url_key=None):
         url_key = self.coerce_url_key(url_key)
-        log.info('starting browser for %r', url_key)
+        log.info("starting browser for %r", url_key)
         assert self.browser is None
 
         self.browser = self.factory.create(url_key=url_key)
@@ -348,6 +376,7 @@ class WithZoom(object):
     Args:
         * level: int, the zooming value (i.e. -2 -> 2 clicks out; 3 -> 3 clicks in)
     """
+
     def __init__(self, level):
         self._level = level
 
@@ -356,24 +385,29 @@ class WithZoom(object):
             ensure_browser_open()
             with self:
                 return func(*args, **kwargs)
+
         return wrapper
 
     def __enter__(self, *args, **kwargs):
         ac = ActionChains(browser())
         for _ in range(abs(self._level)):
-            ac.send_keys(keys.Keys.CONTROL,
-                         keys.Keys.SUBTRACT if self._level < 0 else keys.Keys.ADD)
+            ac.send_keys(
+                keys.Keys.CONTROL,
+                keys.Keys.SUBTRACT if self._level < 0 else keys.Keys.ADD,
+            )
         ac.perform()
 
     def __exit__(self, *args, **kwargs):
         ac = ActionChains(browser())
         for _ in range(abs(self._level)):
-            ac.send_keys(keys.Keys.CONTROL,
-                         keys.Keys.SUBTRACT if -self._level < 0 else keys.Keys.ADD)
+            ac.send_keys(
+                keys.Keys.CONTROL,
+                keys.Keys.SUBTRACT if -self._level < 0 else keys.Keys.ADD,
+            )
         ac.perform()
 
 
-manager = BrowserManager.from_conf(conf.env.get('browser', {}))
+manager = BrowserManager.from_conf(conf.env.get("browser", {}))
 
 driver = LocalProxy(manager.ensure_open)
 
@@ -403,6 +437,7 @@ def ensure_browser_open(url_key=None):
     """
     if not url_key:
         from cfme.utils.appliance import current_appliance
+
         url_key = current_appliance.server.address()
     return manager.ensure_open(url_key=url_key)
 
@@ -430,7 +465,7 @@ def quit():
     manager.quit()
 
 
-ScreenShot = namedtuple("screenshot", ['png', 'error'])
+ScreenShot = namedtuple("screenshot", ["png", "error"])
 
 
 def take_screenshot():
@@ -440,12 +475,12 @@ def take_screenshot():
         screenshot = browser().get_screenshot_as_base64()
     except (AttributeError, WebDriverException):
         # See comments utils.browser.ensure_browser_open for why these two exceptions
-        screenshot_error = 'browser error'
+        screenshot_error = "browser error"
     except Exception as ex:
         # If this fails for any other reason,
         # leave out the screenshot but record the reason
         if str(ex):
-            screenshot_error = '{}: {}'.format(type(ex).__name__, str(ex))
+            screenshot_error = "{}: {}".format(type(ex).__name__, str(ex))
         else:
             screenshot_error = type(ex).__name__
     return ScreenShot(screenshot, screenshot_error)
