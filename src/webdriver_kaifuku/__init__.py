@@ -1,6 +1,7 @@
 """Core functionality for starting, restarting, and stopping a selenium browser."""
 import atexit
 import json
+import logging
 import os
 import threading
 import time
@@ -14,7 +15,6 @@ import requests
 from cached_property import cached_property
 from cfme.fixtures.pytest_store import store, write_line
 from cfme.utils import clear_property_cache, conf, tries
-from cfme.utils.log import logger as log  # TODO remove after artifactor handler
 from cfme.utils.path import data_path
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -28,8 +28,7 @@ from selenium.webdriver.remote.file_detector import UselessFileDetector
 from six.moves.urllib_error import URLError
 from werkzeug.local import LocalProxy
 
-# import logging
-# log = logging.getLogger('cfme.browser')
+log = logging.getLogger(__name__)
 
 
 FIVE_MINUTES = 5 * 60
@@ -459,7 +458,8 @@ def quit():
     Will silently fail if the current browser can't be closed for any reason.
 
     .. note::
-        If a browser can't be closed, it's usually because it has already been closed elsewhere.
+        If a browser can't be closed,
+        it's usually because it has already been closed elsewhere.
 
     """
     manager.quit()
