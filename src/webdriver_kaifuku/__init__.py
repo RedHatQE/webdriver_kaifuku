@@ -4,7 +4,6 @@ import logging
 import warnings
 
 from cfme.fixtures.pytest_store import store, write_line
-from cfme.utils import tries
 from selenium import webdriver
 from selenium.common.exceptions import (
     UnexpectedAlertPresentException,
@@ -12,6 +11,8 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from six.moves.urllib_error import URLError
+
+from .tries import tries
 
 log = logging.getLogger(__name__)
 
