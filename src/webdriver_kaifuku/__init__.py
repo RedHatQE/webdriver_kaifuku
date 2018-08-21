@@ -7,15 +7,10 @@ import threading
 import time
 import warnings
 from collections import namedtuple
-from shutil import rmtree
-from string import Template
-from tempfile import mkdtemp
 
 import requests
-from cached_property import cached_property
 from cfme.fixtures.pytest_store import store, write_line
-from cfme.utils import clear_property_cache, conf, tries
-from cfme.utils.path import data_path
+from cfme.utils import conf, tries
 from selenium import webdriver
 from selenium.common.exceptions import (
     UnexpectedAlertPresentException,
@@ -23,7 +18,6 @@ from selenium.common.exceptions import (
 )
 from selenium.webdriver.common import keys
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from six.moves.urllib_error import URLError
 from werkzeug.local import LocalProxy
@@ -36,26 +30,6 @@ THIRTY_SECONDS = 30
 
 BROWSER_ERRORS = URLError, WebDriverException
 WHARF_OUTER_RETRIES = 2
-
-
-def _load_firefox_profile():
-    # create a firefox profile using the template in data/firefox_profile.js.template
-
-    # Make a new firefox profile dir if it's unset or doesn't exist for some reason
-    firefox_profile_tmpdir = mkdtemp(prefix="firefox_profile_")
-    log.debug("created firefox profile")
-    # Clean up tempdir at exit
-    atexit.register(rmtree, firefox_profile_tmpdir, ignore_errors=True)
-
-    template = data_path.join("firefox_profile.js.template").read()
-    profile_json = Template(template).substitute(profile_dir=firefox_profile_tmpdir)
-    profile_dict = json.loads(profile_json)
-
-    profile = FirefoxProfile(firefox_profile_tmpdir)
-    for pref in profile_dict.items():
-        profile.set_preference(*pref)
-    profile.update_preferences()
-    return profile
 
 
 class Wharf(object):
@@ -134,15 +108,6 @@ class BrowserFactory(object):
         if self.webdriver_class is not webdriver.Remote:
             # desired_capabilities is only for Remote driver, but can sneak in
             self.browser_kwargs.pop("desired_capabilities", None)
-        elif self.browser_kwargs["desired_capabilities"]["browserName"] == "firefox":
-            self.browser_kwargs["browser_profile"] = self._firefox_profile
-
-        if self.webdriver_class is webdriver.Firefox:
-            self.browser_kwargs["firefox_profile"] = self._firefox_profile
-
-    @cached_property
-    def _firefox_profile(self):
-        return _load_firefox_profile()
 
     def processed_browser_args(self):
         self._add_missing_options()
@@ -183,7 +148,6 @@ class BrowserFactory(object):
     def close(self, browser):
         if browser:
             browser.quit()
-            clear_property_cache(self, "_firefox_profile")
 
 
 class WharfFactory(BrowserFactory):
