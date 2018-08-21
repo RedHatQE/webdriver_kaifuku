@@ -2,20 +2,16 @@
 import atexit
 import logging
 import warnings
-from collections import namedtuple
 
 from cfme.fixtures.pytest_store import store, write_line
-from cfme.utils import conf, tries
+from cfme.utils import tries
 from selenium import webdriver
 from selenium.common.exceptions import (
     UnexpectedAlertPresentException,
     WebDriverException,
 )
-from selenium.webdriver.common import keys
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from six.moves.urllib_error import URLError
-from werkzeug.local import LocalProxy
 
 log = logging.getLogger(__name__)
 
@@ -259,126 +255,3 @@ class BrowserManager(object):
 
         self.browser = self.factory.create(url_key=url_key)
         return self.browser
-
-
-class WithZoom(object):
-    """
-    This class is a decorator that used to wrap function with zoom level.
-    this class perform zoom by <level>, call the target function and exit
-    by zooming back to the original zoom level.
-
-    Args:
-        * level: int, the zooming value (i.e. -2 -> 2 clicks out; 3 -> 3 clicks in)
-    """
-
-    def __init__(self, level):
-        self._level = level
-
-    def __call__(self, func):
-        def wrapper(*args, **kwargs):
-            ensure_browser_open()
-            with self:
-                return func(*args, **kwargs)
-
-        return wrapper
-
-    def __enter__(self, *args, **kwargs):
-        ac = ActionChains(browser())
-        for _ in range(abs(self._level)):
-            ac.send_keys(
-                keys.Keys.CONTROL,
-                keys.Keys.SUBTRACT if self._level < 0 else keys.Keys.ADD,
-            )
-        ac.perform()
-
-    def __exit__(self, *args, **kwargs):
-        ac = ActionChains(browser())
-        for _ in range(abs(self._level)):
-            ac.send_keys(
-                keys.Keys.CONTROL,
-                keys.Keys.SUBTRACT if -self._level < 0 else keys.Keys.ADD,
-            )
-        ac.perform()
-
-
-manager = BrowserManager.from_conf(conf.env.get("browser", {}))
-
-driver = LocalProxy(manager.ensure_open)
-
-
-def browser():
-    """callable that will always return the current browser instance
-
-    If ``None``, no browser is running.
-
-    Returns:
-
-        The current browser instance.
-
-    """
-    return manager.browser
-
-
-def ensure_browser_open(url_key=None):
-    """Ensures that there is a browser instance currently open
-
-    Will reuse an existing browser or start a new one as-needed
-
-    Returns:
-
-        The current browser instance.
-
-    """
-    if not url_key:
-        from cfme.utils.appliance import current_appliance
-
-        url_key = current_appliance.server.address()
-    return manager.ensure_open(url_key=url_key)
-
-
-def start(url_key=None):
-    """Starts a new web browser
-
-    If a previous browser was open, it will be closed before starting the new browser
-
-    Args:
-    """
-    # Try to clean up an existing browser session if starting a new one
-    return manager.start(url_key=url_key)
-
-
-def quit():
-    """Close the current browser
-
-    Will silently fail if the current browser can't be closed for any reason.
-
-    .. note::
-        If a browser can't be closed,
-        it's usually because it has already been closed elsewhere.
-
-    """
-    manager.quit()
-
-
-ScreenShot = namedtuple("screenshot", ["png", "error"])
-
-
-def take_screenshot():
-    screenshot = None
-    screenshot_error = None
-    try:
-        screenshot = browser().get_screenshot_as_base64()
-    except (AttributeError, WebDriverException):
-        # See comments utils.browser.ensure_browser_open for why these two exceptions
-        screenshot_error = "browser error"
-    except Exception as ex:
-        # If this fails for any other reason,
-        # leave out the screenshot but record the reason
-        if str(ex):
-            screenshot_error = "{}: {}".format(type(ex).__name__, str(ex))
-        else:
-            screenshot_error = type(ex).__name__
-    return ScreenShot(screenshot, screenshot_error)
-
-
-atexit.register(manager.quit)
