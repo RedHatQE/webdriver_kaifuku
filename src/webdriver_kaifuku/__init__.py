@@ -3,7 +3,8 @@ import atexit
 import logging
 import warnings
 
-from cfme.fixtures.pytest_store import store, write_line
+import attr
+
 from selenium import webdriver
 from selenium.common.exceptions import (
     UnexpectedAlertPresentException,
@@ -47,7 +48,7 @@ class BrowserFactory(object):
             return dict(self.browser_kwargs, keep_alive=False)
         return self.browser_kwargs
 
-    def create(self, url_key):
+    def create(self):
         try:
             browser = tries(
                 2,
@@ -67,8 +68,6 @@ class BrowserFactory(object):
 
         browser.file_detector = UselessFileDetector()
         browser.maximize_window()
-        browser.get(url_key)
-        browser.url_key = url_key
         return browser
 
     def close(self, browser):
@@ -102,7 +101,6 @@ class WharfFactory(BrowserFactory):
         )
         log.info("webdriver command executor set to %s", command_executor)
         log.info(view_msg)
-        write_line(view_msg, cyan=True)
         return dict(
             super(WharfFactory, self).processed_browser_args(),
             command_executor=command_executor,
@@ -117,9 +115,6 @@ class WharfFactory(BrowserFactory):
                 # connection to selenum was refused for unknown reasons
                 log.error(
                     "URLError connecting to selenium; recycling container. URLError:"
-                )
-                write_line(
-                    "URLError caused container recycle, see log for details", red=True
                 )
                 log.exception(ex)
                 self.wharf.checkin()
@@ -138,16 +133,10 @@ class WharfFactory(BrowserFactory):
             self.wharf.checkin()
 
 
+@attr.s
 class BrowserManager(object):
-    def __init__(self, browser_factory):
-        self.factory = browser_factory
-        self.browser = None
-        self._browser_renew_thread = None
-
-    def coerce_url_key(self, key):
-        return (
-            key or store.current_appliance.url
-        )  # TODO: don't rely on store.current_appliance
+    browser_factory = attr.ib()
+    browser = attr.ib(default=None, init=False)
 
     @classmethod
     def from_conf(cls, browser_conf):
@@ -204,15 +193,11 @@ class BrowserManager(object):
             return False
         return True
 
-    def ensure_open(self, url_key=None):
-        url_key = self.coerce_url_key(url_key)
-        if getattr(self.browser, "url_key", None) != url_key:
-            return self.start(url_key=url_key)
-
+    def ensure_open(self):
         if self._is_alive():
             return self.browser
         else:
-            return self.start(url_key=url_key)
+            return self.start()
 
     def add_cleanup(self, callback):
         assert self.browser is not None
@@ -232,7 +217,6 @@ class BrowserManager(object):
                 cl.pop()()
 
     def quit(self):
-        # TODO: figure if we want to log the url key here
         self._consume_cleanups()
         try:
             self.factory.close(self.browser)
@@ -242,17 +226,14 @@ class BrowserManager(object):
         finally:
             self.browser = None
 
-    def start(self, url_key=None):
-        log.info("starting browser")
-        url_key = self.coerce_url_key(url_key)
+    def start(self):
         if self.browser is not None:
             self.quit()
-        return self.open_fresh(url_key=url_key)
+        return self.open_fresh()
 
-    def open_fresh(self, url_key=None):
-        url_key = self.coerce_url_key(url_key)
-        log.info("starting browser for %r", url_key)
+    def open_fresh(self):
+        log.info("starting browser")
         assert self.browser is None
 
-        self.browser = self.factory.create(url_key=url_key)
+        self.browser = self.factory.create()
         return self.browser
