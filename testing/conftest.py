@@ -1,28 +1,40 @@
 import contextlib
 
 import pytest
+from wait_for import wait_for
+
+WHARF_URL = "http://localhost:4899"
 
 
 @contextlib.contextmanager
 def wharf_setup():
     import docker
+    from webdriver_kaifuku import wharf
 
     client = docker.from_env(version="auto")
     client.images.pull("cfmeqe/webdriver-wharf")
     client.images.pull("cfmeqe/cfme_sel_stable")
-    container = client.containers.run(
-        name="webdriver-wharf-kaifuku-test",
-        image="cfmeqe/webdriver-wharf",
-        auto_remove=True,
-        detach=True,
-        privileged=True,
-        network_mode="host",
-        volumes={
-            "/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "rw"}
-        },
-    )
+    preexisting_container = client.containers.get("webdriver-wharf-kaifuku-test")
+    if preexisting_container is None:
+        container = client.containers.run(
+            name="webdriver-wharf-kaifuku-test",
+            image="cfmeqe/webdriver-wharf",
+            # auto_remove=True,
+            detach=True,
+            privileged=True,
+            network_mode="host",
+            volumes={
+                "/var/run/docker.sock": {"bind": "/var/run/docker.sock", "mode": "rw"}
+            },
+        )
+    else:
+        if preexisting_container.status != "running":
+            preexisting_container.restart()
+    wc = wharf.Wharf(WHARF_URL)
+    wait_for(wc.accepts_requests, timeout="20s", logger=wharf.log)
+
     yield {
-        "webdriver_wharf": "http://localhost:4899",
+        "webdriver_wharf": WHARF_URL,
         "webdriver": "Remote",
         "webdriver_options": {"desired_capabilities": {"browserName": "firefox"}},
     }

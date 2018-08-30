@@ -29,6 +29,14 @@ class Wharf(object):
         except ValueError:
             raise ValueError("JSON could not be decoded:\n{}".format(response.content))
 
+    def accepts_requests(self):
+        try:
+            self._get("status")
+            return True
+        except Exception:
+            log.exception("error while checking %s", self)
+            return False
+
     def checkout(self):
         if self.docker_id is not None:
             return self.docker_id
