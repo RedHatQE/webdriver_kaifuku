@@ -149,13 +149,6 @@ class BrowserManager(object):
 
             wharf = Wharf(browser_conf["webdriver_wharf"])
             atexit.register(wharf.checkin)
-            if (
-                browser_conf["webdriver_options"]["desired_capabilities"][
-                    "browserName"
-                ].lower()
-                == "firefox"
-            ):
-                browser_kwargs["desired_capabilities"]["marionette"] = False
             return cls(WharfFactory(webdriver_class, browser_kwargs, wharf))
         else:
             if webdriver_name == "Remote":
@@ -170,13 +163,6 @@ class BrowserManager(object):
                         "--no-sandbox"
                     ]
                     browser_kwargs["desired_capabilities"].pop("marionette", None)
-                if (
-                    browser_conf["webdriver_options"]["desired_capabilities"][
-                        "browserName"
-                    ].lower()
-                    == "firefox"
-                ):
-                    browser_kwargs["desired_capabilities"]["marionette"] = False
 
             return cls(BrowserFactory(webdriver_class, browser_kwargs))
 
@@ -215,7 +201,7 @@ class BrowserManager(object):
             while cl:
                 cl.pop()()
 
-    def quit(self):
+    def close(self):
         self._consume_cleanups()
         try:
             self.browser_factory.close(self.browser)
@@ -224,6 +210,8 @@ class BrowserManager(object):
             log.exception(e)
         finally:
             self.browser = None
+
+    quit = close
 
     def start(self):
         if self.browser is not None:

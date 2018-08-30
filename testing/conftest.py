@@ -38,7 +38,8 @@ def wharf_setup():
         "webdriver": "Remote",
         "webdriver_options": {"desired_capabilities": {"browserName": "firefox"}},
     }
-    container.kill()
+    if preexisting_container is None:
+        container.kill()
 
 
 @contextlib.contextmanager
