@@ -24,20 +24,17 @@ BROWSER_ERRORS = URLError, WebDriverException
 WHARF_OUTER_RETRIES = 2
 
 
+@attr.s
 class BrowserFactory(object):
-    def __init__(self, webdriver_class, browser_kwargs):
-        self.webdriver_class = webdriver_class
-        self.browser_kwargs = browser_kwargs
+    webdriver_class = attr.ib()
+    browser_kwargs = attr.ib()
 
-        self._add_missing_options()
-
-    def _add_missing_options(self):
+    def __attr_post_init__(self):
         if self.webdriver_class is not webdriver.Remote:
             # desired_capabilities is only for Remote driver, but can sneak in
             self.browser_kwargs.pop("desired_capabilities", None)
 
     def processed_browser_args(self):
-        self._add_missing_options()
 
         if "keep_alive" in self.browser_kwargs:
             warnings.warn(
@@ -75,24 +72,24 @@ class BrowserFactory(object):
             browser.quit()
 
 
+@attr.s
 class WharfFactory(BrowserFactory):
-    def __init__(self, webdriver_class, browser_kwargs, wharf):
-        super(WharfFactory, self).__init__(webdriver_class, browser_kwargs)
-        self.wharf = wharf
+    wharf = attr.ib()
 
+    def __attr_post_init__(self):
         if (
-            browser_kwargs.get("desired_capabilities", {}).get("browserName")
+            self.browser_kwargs.get("desired_capabilities", {}).get("browserName")
             == "chrome"
         ):
             # chrome uses containers to sandbox the browser, and we use containers to
             # run chrome in wharf, so disable the sandbox if running chrome in wharf
-            co = browser_kwargs["desired_capabilities"].get("chromeOptions", {})
+            co = self.browser_kwargs["desired_capabilities"].get("chromeOptions", {})
             arg = "--no-sandbox"
             if "args" not in co:
                 co["args"] = [arg]
             elif arg not in co["args"]:
                 co["args"].append(arg)
-            browser_kwargs["desired_capabilities"]["chromeOptions"] = co
+            self.browser_kwargs["desired_capabilities"]["chromeOptions"] = co
 
     def processed_browser_args(self):
         command_executor = self.wharf.config["webdriver_url"]
@@ -106,11 +103,11 @@ class WharfFactory(BrowserFactory):
             command_executor=command_executor,
         )
 
-    def create(self, url_key):
+    def create(self):
         def inner():
             try:
                 self.wharf.checkout()
-                return super(WharfFactory, self).create(url_key)
+                return super(WharfFactory, self).create()
             except URLError as ex:
                 # connection to selenum was refused for unknown reasons
                 log.error(
@@ -140,12 +137,14 @@ class BrowserManager(object):
 
     @classmethod
     def from_conf(cls, browser_conf):
+        log.debug(browser_conf)
         webdriver_name = browser_conf.get("webdriver", "Firefox")
         webdriver_class = getattr(webdriver, webdriver_name)
 
         browser_kwargs = browser_conf.get("webdriver_options", {})
 
         if "webdriver_wharf" in browser_conf:
+            log.warning("wharf")
             from .wharf import Wharf
 
             wharf = Wharf(browser_conf["webdriver_wharf"])
@@ -219,7 +218,7 @@ class BrowserManager(object):
     def quit(self):
         self._consume_cleanups()
         try:
-            self.factory.close(self.browser)
+            self.browser_factory.close(self.browser)
         except Exception as e:
             log.error("An exception happened during browser shutdown:")
             log.exception(e)
@@ -235,5 +234,5 @@ class BrowserManager(object):
         log.info("starting browser")
         assert self.browser is None
 
-        self.browser = self.factory.create()
+        self.browser = self.browser_factory.create()
         return self.browser
