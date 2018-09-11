@@ -168,6 +168,8 @@ class BrowserManager(object):
 
     def _is_alive(self):
         log.debug("alive check")
+        if self.browser is None:
+            return False
         try:
             self.browser.current_url
         except UnexpectedAlertPresentException:
