@@ -35,6 +35,12 @@ class BrowserFactory(object):
             self.browser_kwargs.pop("desired_capabilities", None)
 
     def processed_browser_args(self):
+        if self.browser_kwargs.get("keep_alive_allowed"):
+            # keep_alive_allowed is not a valid browser option,
+            # it just enables the opt-in for keep-alive
+            copy = dict(self.browser_kwargs)
+            del copy["keep_alive_allowed"]
+            return copy
 
         if "keep_alive" in self.browser_kwargs:
             warnings.warn(
