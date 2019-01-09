@@ -42,14 +42,17 @@ class BrowserFactory(object):
             del copy["keep_alive_allowed"]
             return copy
 
-        if "keep_alive" in self.browser_kwargs:
+        browser_kwargs = dict(self.browser_kwargs)
+        browser_kwargs.pop("keep_alive_allowed", None)
+
+        if "keep_alive" in browser_kwargs:
             warnings.warn(
                 "forcing browser keep_alive to False due to selenium bugs\n"
                 "we are aware of the performance cost and hope to redeem",
                 category=RuntimeWarning,
             )
-            return dict(self.browser_kwargs, keep_alive=False)
-        return self.browser_kwargs
+            return dict(browser_kwargs, keep_alive=False)
+        return browser_kwargs
 
     def create(self):
         try:
