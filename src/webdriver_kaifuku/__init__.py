@@ -167,11 +167,24 @@ class BrowserManager(object):
                     ].lower()
                     == "chrome"
                 ):
-                    browser_kwargs["desired_capabilities"]["chromeOptions"] = {}
-                    browser_kwargs["desired_capabilities"]["chromeOptions"]["args"] = [
-                        "--no-sandbox"
-                    ]
+                    browser_kwargs["desired_capabilities"][
+                        "chromeOptions"
+                    ] = browser_conf["webdriver_options"]["desired_capabilities"].get(
+                        "chromeOptions", {}
+                    )
+                    browser_kwargs["desired_capabilities"]["chromeOptions"][
+                        "args"
+                    ] = browser_kwargs["desired_capabilities"]["chromeOptions"].get(
+                        "args", []
+                    )
+                    browser_kwargs["desired_capabilities"]["chromeOptions"][
+                        "args"
+                    ].append("--no-sandbox")
                     browser_kwargs["desired_capabilities"].pop("marionette", None)
+                if "command_executor" in browser_conf:
+                    browser_kwargs["command_executor"] = browser_conf[
+                        "command_executor"
+                    ]
 
             return cls(BrowserFactory(webdriver_class, browser_kwargs))
 
