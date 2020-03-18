@@ -1,6 +1,12 @@
 """copied from cfme.utils"""
 
 
+class TriesExceeded(Exception):
+    """Default exception raised when tries() method doesn't catch a func exception"""
+
+    pass
+
+
 def tries(num_tries, exceptions, f, *args, **kwargs):
     """ Tries to call the function multiple times if specific exceptions occur.
 
@@ -17,14 +23,15 @@ def tries(num_tries, exceptions, f, *args, **kwargs):
     Raises:
         What ``f`` raises if the try count is exceeded.
     """
-    tries = 0
-    failure = None
-    while tries < num_tries:
-        tries += 1
+    caught_exception = TriesExceeded(
+        "Tries were exhausted without a specific function exception"
+    )
+    used_tries = 0
+    while used_tries < num_tries:
+        used_tries += 1
         try:
             return f(*args, **kwargs)
         except exceptions as e:
-            failure = e
+            caught_exception = e
     else:
-        assert failure is not None
-        raise failure
+        raise caught_exception
