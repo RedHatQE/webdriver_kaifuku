@@ -28,7 +28,7 @@ class BrowserFactory(object):
     webdriver_class = attr.ib()
     browser_kwargs = attr.ib()
 
-    def __attr_post_init__(self):
+    def __attrs_post_init__(self):
         if self.webdriver_class is not webdriver.Remote:
             # desired_capabilities is only for Remote driver, but can sneak in
             self.browser_kwargs.pop("desired_capabilities", None)
@@ -86,7 +86,7 @@ class WharfFactory(BrowserFactory):
 
     DEFAULT_WHARF_CHROME_OPT_ARGS = ["--no-sandbox"]
 
-    def __attr_post_init__(self):
+    def __attrs_post_init__(self):
         if (
             self.browser_kwargs.get("desired_capabilities", {}).get("browserName")
             == "chrome"
