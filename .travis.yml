@@ -1,6 +1,5 @@
 language: python
 python:
-  - '2.7'
   - '3.6'
 stages:
 - linting
@@ -33,7 +32,7 @@ jobs:
       - pre-commit run --all-files
 install:
   - pip install -U setuptools pip
-  - pip install -U -e . pytest
+  - pip install -U -e . pytest docker
 script:
 - pytest
 cache:
