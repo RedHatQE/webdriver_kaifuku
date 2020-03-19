@@ -1,6 +1,12 @@
+dist: xenial
+addons:
+  apt:
+    packages:
+      - docker
 language: python
 python:
   - '3.6'
+  - '3.7'
 stages:
 - linting
 - test
