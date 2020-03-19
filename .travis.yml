@@ -3,6 +3,8 @@ addons:
   apt:
     packages:
       - docker
+services:
+  - docker
 language: python
 python:
   - '3.6'
