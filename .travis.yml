@@ -38,10 +38,10 @@ jobs:
       - pre-commit run --all-files
 install:
   - pip install -U setuptools pip
-  - pip install -U -e . pytest docker
+  - pip install -U -e . pytest docker requests
 script:
-- pytest
+  - pytest
 cache:
   directories:
-    - $HOME/.cache/pip
+    #- $HOME/.cache/pip
     - $HOME/.cache/pre-commit
