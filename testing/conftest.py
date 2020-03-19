@@ -4,7 +4,7 @@ import pytest
 from wait_for import wait_for
 
 WHARF_URL = "http://localhost:4899"
-WHARF_IMAGE = "cfmeqe/webdriver-wharf"
+WHARF_IMAGE = "docker.io/cfmeqe/webdriver-wharf"
 BROWSER_IMAGE = "cfmeqe/cfme_sel_stable"
 
 
@@ -19,7 +19,7 @@ def crate_or_reuse_existing(name, image, **kw):
         # assume similar setup
         container = client.containers.get(name)
         existed = True
-    except docker.errors.NotFound:
+    except (docker.errors.NotFound, docker.errors.ImageNotFound):
         container = client.containers.run(name=name, image=image, **kw)
         existed = False
     else:
@@ -37,7 +37,7 @@ def wharf_setup():
 
     with crate_or_reuse_existing(
         name="webdriver-wharf-kaifuku-test",
-        image="cfmeqe/webdriver-wharf",
+        image=WHARF_IMAGE,
         auto_remove=True,
         detach=True,
         privileged=True,
