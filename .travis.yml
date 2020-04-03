@@ -2,7 +2,7 @@ dist: xenial
 addons:
   apt:
     packages:
-      - docker
+      - docker-ce
 services:
   - docker
 language: python
