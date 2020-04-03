@@ -42,6 +42,18 @@ install:
   - pip install -U setuptools pip
   - pip install -U -e . pytest docker requests
   - docker pull cfmeqe/webdriver-wharf
+  - |
+      docker run \
+        --detach \
+        --name webdriver-wharf-kaifuku-test \
+        --rm \
+        --privileged \
+        --network host \
+        --volume /var/run/docker.sock:/var/run/docker.sock:rw \
+        cfmeqe/webdriver-wharf
+  - docker ps
+
+
 script:
   - pytest
 cache:
