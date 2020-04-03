@@ -52,6 +52,8 @@ install:
         --volume /var/run/docker.sock:/var/run/docker.sock:rw \
         cfmeqe/webdriver-wharf
   - docker ps
+  - sleep 10
+  - docker logs webdriver-wharf-kaifuku-test
 
 
 script:
