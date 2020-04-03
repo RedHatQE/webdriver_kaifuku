@@ -42,6 +42,7 @@ install:
   - pip install -U setuptools pip
   - pip install -U -e . pytest docker requests
   - docker pull cfmeqe/webdriver-wharf
+  - docker pull cfmeqe/cfme_sel_stable
   - |
       docker run \
         --detach \
