@@ -41,6 +41,7 @@ jobs:
 install:
   - pip install -U setuptools pip
   - pip install -U -e . pytest docker requests
+  - docker pull cfmeqe/webdriver-wharf
 script:
   - pytest
 cache:
