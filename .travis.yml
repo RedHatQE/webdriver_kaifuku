@@ -49,7 +49,7 @@ install:
         --name webdriver-wharf-kaifuku-test \
         --rm \
         --privileged \
-        --network host \
+        --publish-all \
         --volume /var/run/docker.sock:/var/run/docker.sock:rw \
         cfmeqe/webdriver-wharf
   - docker ps
