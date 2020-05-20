@@ -52,7 +52,7 @@ def wharf_setup():
         },
     ):
         wc = wharf.Wharf(WHARF_URL)
-        wait_for(wc.accepts_requests, timeout="20s", logger=wharf.log)
+        wait_for(wc.accepts_requests, timeout="60s", logger=wharf.log)
 
         yield {
             "webdriver_wharf": WHARF_URL,
