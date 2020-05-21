@@ -4,7 +4,6 @@ import logging
 import warnings
 
 import attr
-
 from selenium import webdriver
 from selenium.common.exceptions import (
     UnexpectedAlertPresentException,
