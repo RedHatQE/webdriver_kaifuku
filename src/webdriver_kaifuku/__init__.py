@@ -2,6 +2,7 @@
 import atexit
 import logging
 import warnings
+from urllib.error import URLError
 
 import attr
 from selenium import webdriver
@@ -10,7 +11,6 @@ from selenium.common.exceptions import (
     WebDriverException,
 )
 from selenium.webdriver.remote.file_detector import UselessFileDetector
-from six.moves.urllib_error import URLError
 
 from .tries import tries
 
