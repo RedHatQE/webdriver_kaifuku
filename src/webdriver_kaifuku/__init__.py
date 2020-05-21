@@ -3,6 +3,7 @@ import atexit
 import logging
 import warnings
 from urllib.error import URLError
+from urllib.parse import urlparse
 
 import attr
 from selenium import webdriver
@@ -22,6 +23,34 @@ THIRTY_SECONDS = 30
 BROWSER_ERRORS = URLError, WebDriverException
 WHARF_OUTER_RETRIES = 2
 TRUSTED_WEB_DRIVERS = [webdriver.Firefox, webdriver.Chrome, webdriver.Remote]
+
+
+def _get_browser_name(browser_kwargs):
+    """
+    Extract the name of the browser from the desired capabilities
+    """
+    name = browser_kwargs.get("desired_capabilities", {}).get("browserName")
+    if name:
+        return name.lower()
+
+
+def _populate_chrome_options(browser_kwargs):
+    """
+    Initialize the 'chromeOptions' within desired_capabilities.
+
+    'chromeOptions' and 'args' are created as empty dict/lists if they are not present.
+
+    Existing values will not be removed.
+    """
+    desired_capabilities = browser_kwargs.get("desired_capabilities", {})
+    desired_capabilities["chromeOptions"] = desired_capabilities.get(
+        "chromeOptions", {}
+    )
+    chrome_options = desired_capabilities["chromeOptions"]
+
+    chrome_options["args"] = chrome_options.get("args", [])
+
+    return browser_kwargs
 
 
 @attr.s
@@ -86,19 +115,13 @@ class WharfFactory(BrowserFactory):
     wharf = attr.ib()
 
     def __attr_post_init__(self):
-        if (
-            self.browser_kwargs.get("desired_capabilities", {}).get("browserName")
-            == "chrome"
-        ):
+        if _get_browser_name(self.browser_kwargs) == "chrome":
             # chrome uses containers to sandbox the browser, and we use containers to
             # run chrome in wharf, so disable the sandbox if running chrome in wharf
-            co = self.browser_kwargs["desired_capabilities"].get("chromeOptions", {})
-            arg = "--no-sandbox"
-            if "args" not in co:
-                co["args"] = [arg]
-            elif arg not in co["args"]:
-                co["args"].append(arg)
-            self.browser_kwargs["desired_capabilities"]["chromeOptions"] = co
+            _populate_chrome_options(self.browser_kwargs)
+            self.browser_kwargs["desired_capabilities"]["chromeOptions"]["args"].append(
+                "--no-sandbox"
+            )
 
     def processed_browser_args(self):
         command_executor = self.wharf.config["webdriver_url"]
@@ -144,6 +167,47 @@ class BrowserManager(object):
     browser_factory = attr.ib()
     browser = attr.ib(default=None, init=False)
 
+    @staticmethod
+    def _config_kwargs_for_remote_chrome(browser_kwargs):
+        _populate_chrome_options(browser_kwargs)
+        browser_kwargs["desired_capabilities"]["chromeOptions"]["args"].append(
+            "--no-sandbox"
+        )
+        browser_kwargs["desired_capabilities"].pop("marionette", None)
+
+    @staticmethod
+    def _config_kwargs_for_proxy(browser_kwargs, proxy_url):
+        browser_name = _get_browser_name(browser_kwargs)
+
+        parsed_url = urlparse(proxy_url)
+        # proxy options don't need to include the scheme, just host:port
+        proxy_netloc = parsed_url.netloc or parsed_url.path
+
+        if browser_name == "chrome":
+            _populate_chrome_options(browser_kwargs)
+            if not parsed_url.scheme:
+                parsed_url
+            browser_kwargs["desired_capabilities"]["chromeOptions"]["args"].append(
+                f"--proxy-server={proxy_netloc}"
+            )
+
+        elif browser_name == "firefox":
+            browser_kwargs["desired_capabilities"] = browser_kwargs.get(
+                "desired_capabilities", {}
+            )
+            browser_kwargs["desired_capabilities"]["proxy"] = {
+                "proxyType": "MANUAL",
+                "httpProxy": proxy_netloc,
+                "ftpProxy": proxy_netloc,
+                "sslProxy": proxy_netloc,
+            }
+
+        else:
+            log.error(
+                "ignoring proxy configuration for unknown browser type '%s'",
+                browser_name,
+            )
+
     @classmethod
     def from_conf(cls, browser_conf):
         log.debug(browser_conf)
@@ -155,6 +219,9 @@ class BrowserManager(object):
 
         browser_kwargs = browser_conf.get("webdriver_options", {})
 
+        if "proxy_url" in browser_conf:
+            cls._config_kwargs_for_proxy(browser_kwargs, browser_conf["proxy_url"])
+
         if "webdriver_wharf" in browser_conf:
             log.warning("wharf")
             from .wharf import Wharf
@@ -164,26 +231,8 @@ class BrowserManager(object):
             return cls(WharfFactory(webdriver_class, browser_kwargs, wharf))
         else:
             if webdriver_class == webdriver.Remote:
-                if (
-                    browser_conf["webdriver_options"]["desired_capabilities"][
-                        "browserName"
-                    ].lower()
-                    == "chrome"
-                ):
-                    browser_kwargs["desired_capabilities"][
-                        "chromeOptions"
-                    ] = browser_conf["webdriver_options"]["desired_capabilities"].get(
-                        "chromeOptions", {}
-                    )
-                    browser_kwargs["desired_capabilities"]["chromeOptions"][
-                        "args"
-                    ] = browser_kwargs["desired_capabilities"]["chromeOptions"].get(
-                        "args", []
-                    )
-                    browser_kwargs["desired_capabilities"]["chromeOptions"][
-                        "args"
-                    ].append("--no-sandbox")
-                    browser_kwargs["desired_capabilities"].pop("marionette", None)
+                if _get_browser_name(browser_kwargs) == "chrome":
+                    cls._config_kwargs_for_remote_chrome(browser_kwargs)
                 if "command_executor" in browser_conf:
                     browser_kwargs["command_executor"] = browser_conf[
                         "command_executor"
