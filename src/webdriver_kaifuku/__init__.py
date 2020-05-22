@@ -21,6 +21,7 @@ THIRTY_SECONDS = 30
 
 BROWSER_ERRORS = URLError, WebDriverException
 WHARF_OUTER_RETRIES = 2
+TRUSTED_WEB_DRIVERS = [webdriver.Firefox, webdriver.Chrome, webdriver.Remote]
 
 
 @attr.s
@@ -59,7 +60,7 @@ class BrowserFactory(object):
                 2,
                 WebDriverException,
                 self.webdriver_class,
-                **self.processed_browser_args()
+                **self.processed_browser_args(),
             )
         except URLError as e:
             if e.reason.errno == 111:
@@ -117,7 +118,7 @@ class WharfFactory(BrowserFactory):
                 self.wharf.checkout()
                 return super(WharfFactory, self).create()
             except URLError as ex:
-                # connection to selenum was refused for unknown reasons
+                # connection to selenium was refused for unknown reasons
                 log.error(
                     "URLError connecting to selenium; recycling container. URLError:"
                 )
@@ -146,8 +147,11 @@ class BrowserManager(object):
     @classmethod
     def from_conf(cls, browser_conf):
         log.debug(browser_conf)
-        webdriver_name = browser_conf.get("webdriver", "Firefox")
+        webdriver_name = browser_conf.get("webdriver", "Firefox").title()
         webdriver_class = getattr(webdriver, webdriver_name)
+
+        if webdriver_class not in TRUSTED_WEB_DRIVERS:
+            log.warning(f"Untrusted webdriver {webdriver_name}, may cause failure.")
 
         browser_kwargs = browser_conf.get("webdriver_options", {})
 
@@ -159,7 +163,7 @@ class BrowserManager(object):
             atexit.register(wharf.checkin)
             return cls(WharfFactory(webdriver_class, browser_kwargs, wharf))
         else:
-            if webdriver_name == "Remote":
+            if webdriver_class == webdriver.Remote:
                 if (
                     browser_conf["webdriver_options"]["desired_capabilities"][
                         "browserName"
