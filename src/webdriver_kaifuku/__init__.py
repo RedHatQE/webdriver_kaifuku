@@ -58,7 +58,7 @@ class BrowserFactory(object):
     webdriver_class = attr.ib()
     browser_kwargs = attr.ib()
 
-    def __attr_post_init__(self):
+    def __attrs_post_init__(self):
         if self.webdriver_class is not webdriver.Remote:
             # desired_capabilities is only for Remote driver, but can sneak in
             self.browser_kwargs.pop("desired_capabilities", None)
@@ -114,10 +114,19 @@ class BrowserFactory(object):
 class WharfFactory(BrowserFactory):
     wharf = attr.ib()
 
-    def __attr_post_init__(self):
+    DEFAULT_WHARF_CHROME_OPT_ARGS = ["--no-sandbox"]
+
+    def __attrs_post_init__(self):
         if _get_browser_name(self.browser_kwargs) == "chrome":
             # chrome uses containers to sandbox the browser, and we use containers to
             # run chrome in wharf, so disable the sandbox if running chrome in wharf
+            co = self.browser_kwargs["desired_capabilities"].get("chromeOptions", {})
+            for arg in self.DEFAULT_WHARF_CHROME_OPT_ARGS:
+                if "args" not in co:
+                    co["args"] = [arg]
+                elif arg not in co["args"]:
+                    co["args"].append(arg)
+            self.browser_kwargs["desired_capabilities"]["chromeOptions"] = co
             _populate_chrome_options(self.browser_kwargs)
             self.browser_kwargs["desired_capabilities"]["chromeOptions"]["args"].append(
                 "--no-sandbox"
@@ -164,6 +173,11 @@ class WharfFactory(BrowserFactory):
 
 @attr.s
 class BrowserManager(object):
+    BR_FACTORY_CLASS = BrowserFactory
+    WF_FACTORY_CLASS = WharfFactory
+
+    DEFAULT_CHROME_OPT_ARGS = ["--no-sandbox"]
+
     browser_factory = attr.ib()
     browser = attr.ib(default=None, init=False)
 
@@ -228,7 +242,7 @@ class BrowserManager(object):
 
             wharf = Wharf(browser_conf["webdriver_wharf"])
             atexit.register(wharf.checkin)
-            return cls(WharfFactory(webdriver_class, browser_kwargs, wharf))
+            return cls(cls.WF_FACTORY_CLASS(webdriver_class, browser_kwargs, wharf))
         else:
             if webdriver_class == webdriver.Remote:
                 if _get_browser_name(browser_kwargs) == "chrome":
@@ -238,7 +252,7 @@ class BrowserManager(object):
                         "command_executor"
                     ]
 
-            return cls(BrowserFactory(webdriver_class, browser_kwargs))
+            return cls(cls.BR_FACTORY_CLASS(webdriver_class, browser_kwargs))
 
     def _is_alive(self):
         log.debug("alive check")
