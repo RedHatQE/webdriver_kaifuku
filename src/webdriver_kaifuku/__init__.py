@@ -212,7 +212,6 @@ class BrowserManager(object):
             browser_kwargs["desired_capabilities"]["proxy"] = {
                 "proxyType": "MANUAL",
                 "httpProxy": proxy_netloc,
-                "ftpProxy": proxy_netloc,
                 "sslProxy": proxy_netloc,
             }
 
