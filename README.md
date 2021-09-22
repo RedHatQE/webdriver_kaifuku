@@ -45,7 +45,7 @@ manager_config = {
         "command_executor": "http://localhost:<port>/wd/hub",
     },
 }
-manager = BrowserManager.from_conf({"webdriver": "Chrome"})
+manager = BrowserManager.from_conf(manager_config)
 manager.start()
 manager.close()
 ```
