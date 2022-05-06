@@ -1,8 +1,8 @@
 name: 🕵️ Test suite
 
 on:
-  push: true
-  pull_request: true
+  push: {}
+  pull_request: {}
   schedule:
     # Run every Friday at 23:59 UTC
     - cron: 59 23 * * 5
