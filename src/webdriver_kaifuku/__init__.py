@@ -253,7 +253,8 @@ class BrowserManager(object):
 
             return cls(cls.BR_FACTORY_CLASS(webdriver_class, browser_kwargs))
 
-    def _is_alive(self):
+    @property
+    def is_alive(self):
         log.debug("alive check")
         if self.browser is None:
             return False
@@ -268,7 +269,7 @@ class BrowserManager(object):
         return True
 
     def ensure_open(self):
-        if self._is_alive():
+        if self.is_alive:
             return self.browser
         else:
             return self.start()
