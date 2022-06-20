@@ -1,4 +1,4 @@
-name: 🐍  Publish to PyPI
+name: Publish to PyPI
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-and-publish:
-    name: Build and publish Python 🐍 distributions to PyPI
+    name: Build and publish Python distributions to PyPI
     if: startsWith(github.event.ref, 'refs/tags')
     runs-on: ubuntu-latest
     steps:
@@ -31,6 +31,7 @@ jobs:
       - name: Deploy to PyPI
         uses: pypa/gh-action-pypi-publish@v1.4.1
         with:
+          skip_existing: true
           user: __token__
           password: ${{ secrets.pypi_token }}
 
