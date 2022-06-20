@@ -23,9 +23,7 @@ def tries(num_tries, exceptions, f, *args, **kwargs):
     Raises:
         What ``f`` raises if the try count is exceeded.
     """
-    caught_exception = TriesExceeded(
-        "Tries were exhausted without a specific function exception"
-    )
+    caught_exception = TriesExceeded("Tries were exhausted without a specific function exception")
     used_tries = 0
     while used_tries < num_tries:
         used_tries += 1
