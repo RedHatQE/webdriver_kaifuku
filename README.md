@@ -42,23 +42,8 @@ manager_config = {
     "webdriver": "Remote",
     "webdriver_options": {
         "desired_capabilities": {"browserName": "firefox"},
-        "command_executor": "http://localhost:<port>/wd/hub",
+        "command_executor": "http://localhost:<port>",
     },
-}
-manager = BrowserManager.from_conf(manager_config)
-manager.start()
-manager.close()
-```
-
-- [Wharf](https://github.com/RedHatQE/webdriver-wharf)
-
-```python
-from webdriver_kaifuku import BrowserManager
-
-manager_config = {
-    "webdriver_wharf": "<wharf_url>",
-    "webdriver": "Remote",
-    "webdriver_options": {"desired_capabilities": {"browserName": "firefox"}},
 }
 manager = BrowserManager.from_conf(manager_config)
 manager.start()
