@@ -65,13 +65,13 @@ def selenium_container():
 
 
 @pytest.fixture(params=CONFIGS)
-def manager(selenium_container, request: pytest.FixtureRequest):
+def test_data(selenium_container, request: pytest.FixtureRequest):
     from webdriver_kaifuku import BrowserManager, log
 
-    mgr = BrowserManager.from_conf(request.param)
-    mgr.browser_name = request.param["webdriver_options"]["desired_capabilities"][  # type: ignore
+    mgr = BrowserManager.from_conf(request.param)  # type: ignore
+    browser_name = request.param["webdriver_options"]["desired_capabilities"][  # type: ignore
         "browserName"
     ]
     log.warning(mgr)
     with contextlib.closing(mgr) as mgr:
-        yield mgr
+        yield mgr, browser_name

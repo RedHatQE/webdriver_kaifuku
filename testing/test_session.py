@@ -1,10 +1,13 @@
+from __future__ import annotations
+
 import subprocess
 
 import requests
 from webdriver_kaifuku import BrowserManager
 
 
-def test_open_close(manager: BrowserManager):
+def test_open_close(test_data: tuple[BrowserManager, str]):
+    manager, _ = test_data
     driver = manager.ensure_open()
     driver2 = manager.ensure_open()
     assert driver is driver2
@@ -12,19 +15,20 @@ def test_open_close(manager: BrowserManager):
     assert driver3 is not driver2
 
 
-def test_session(manager: BrowserManager, selenium_container: str):
+def test_session(test_data: tuple[BrowserManager, str], selenium_container: str):
+    manager, browser_name = test_data
     driver = manager.ensure_open()
     r = requests.get("http://localhost:4444/status")
     assert r.ok
     assert driver.caps["acceptInsecureCerts"] is True
-    assert driver.caps["browserName"] == manager.browser_name  # type: ignore
-    if manager.browser_name == "firefox":  # type: ignore
+    assert driver.caps["browserName"] == browser_name
+    if browser_name == "firefox":
         assert driver.caps["proxy"] == {
             "httpProxy": "example.com:8080",
             "proxyType": "MANUAL",
             "sslProxy": "example.com:8080",
         }
-    if manager.browser_name == "chrome":  # type: ignore
+    if browser_name == "chrome":
         driver.caps["goog:loggingPrefs"] == {"browser": "INFO", "performance": "ALL"}
         ps = subprocess.run(
             [
