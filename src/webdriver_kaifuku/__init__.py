@@ -1,7 +1,6 @@
 """Core functionality for starting, restarting, and stopping a selenium browser."""
 from __future__ import annotations
 
-import atexit
 import logging
 from copy import copy
 from typing import Callable
@@ -9,7 +8,8 @@ from typing import ClassVar
 from urllib.error import URLError
 from urllib.parse import urlparse
 
-import attr
+from attrs import define
+from attrs import field
 from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import WebDriverException
@@ -17,7 +17,6 @@ from selenium.webdriver.remote.file_detector import UselessFileDetector
 from selenium.webdriver.remote.webdriver import WebDriver
 
 from .tries import tries
-from .wharf import Wharf
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +24,6 @@ log = logging.getLogger(__name__)
 THIRTY_SECONDS = 30
 
 BROWSER_ERRORS = URLError, WebDriverException
-WHARF_OUTER_RETRIES = 2
 TRUSTED_WEB_DRIVERS = [webdriver.Firefox, webdriver.Chrome, webdriver.Remote]
 
 
@@ -39,7 +37,7 @@ def _get_browser_name(webdriver_kwargs: dict) -> str:
     raise ValueError("No browser name specified")
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class BrowserFactory:
     ALLOWED_KWARGS: ClassVar[list[str]] = ["command_executor", "options", "keep_alive"]
     webdriver_class: type
@@ -73,51 +71,10 @@ class BrowserFactory:
             browser.quit()
 
 
-@attr.s(auto_attribs=True)
-class WharfFactory(BrowserFactory):
-    wharf: Wharf
-
-    def processed_browser_args(self):
-        command_executor = self.wharf.config["webdriver_url"]
-        view_msg = "tests can be viewed via vnc on display {}".format(
-            self.wharf.config["vnc_display"]
-        )
-        log.info("webdriver command executor set to %s", command_executor)
-        log.info(view_msg)
-        return dict(
-            super(WharfFactory, self).processed_browser_args(),
-            command_executor=command_executor,
-        )
-
-    def create(self):
-        def inner():
-            try:
-                self.wharf.checkout()
-                return super(WharfFactory, self).create()
-            except URLError as ex:
-                # connection to selenium was refused for unknown reasons
-                log.error("URLError connecting to selenium; recycling container. URLError:")
-                log.exception(ex)
-                self.wharf.checkin()
-                raise
-            except Exception:
-                log.exception("failure on webdriver usage, returning container")
-                self.wharf.checkin()
-                raise
-
-        return tries(WHARF_OUTER_RETRIES, BROWSER_ERRORS, inner)
-
-    def close(self, browser):
-        try:
-            super(WharfFactory, self).close(browser)
-        finally:
-            self.wharf.checkin()
-
-
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class BrowserManager:
     browser_factory: BrowserFactory
-    browser: WebDriver | None = attr.ib(default=None, init=False)
+    browser: WebDriver | None = field(default=None, init=False)
 
     @staticmethod
     def _config_options_for_remote_chrome(browser_conf: dict) -> webdriver.ChromeOptions:
@@ -178,15 +135,9 @@ class BrowserManager:
         if browser_name == "firefox":
             webdriver_kwargs["options"] = cls._config_options_for_remote_firefox(browser_conf)
 
-        if "webdriver_wharf" in browser_conf:
-            log.warning("wharf")
-            wharf = Wharf(browser_conf["webdriver_wharf"])
-            atexit.register(wharf.checkin)
-            return cls(WharfFactory(webdriver_class, webdriver_kwargs, wharf))
-        else:
-            if webdriver_class == webdriver.Remote and "command_executor" in browser_conf:
-                webdriver_kwargs["command_executor"] = browser_conf["command_executor"]
-            return cls(BrowserFactory(webdriver_class, webdriver_kwargs))
+        if webdriver_class == webdriver.Remote and "command_executor" in browser_conf:
+            webdriver_kwargs["command_executor"] = browser_conf["command_executor"]
+        return cls(BrowserFactory(webdriver_class, webdriver_kwargs))
 
     @property
     def is_alive(self) -> bool:
@@ -205,6 +156,8 @@ class BrowserManager:
 
     def ensure_open(self) -> WebDriver:
         if self.is_alive:
+            # typeguard as is_alive will not communicate as type guard
+            assert self.browser is not None
             return self.browser
         else:
             return self.start()
@@ -212,9 +165,9 @@ class BrowserManager:
     def add_cleanup(self, callback: Callable) -> None:
         assert self.browser is not None
         try:
-            cl = self.browser.__cleanup
+            cl = self.browser.__cleanup  # type: ignore
         except AttributeError:
-            cl = self.browser.__cleanup = []
+            cl = self.browser.__cleanup = []  # type: ignore
         cl.append(callback)
 
     def _consume_cleanups(self) -> None:

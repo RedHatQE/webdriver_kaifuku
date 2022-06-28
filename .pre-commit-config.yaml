@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v2.7.1
+  rev: v3.1.0
   hooks:
   - id: reorder-python-imports
 - repo: https://github.com/psf/black
@@ -30,4 +30,11 @@ repos:
   rev: v0.961
   hooks:
     - id: mypy
-      additional_dependencies: [types-attrs, types-requests]
+      language_version: python3
+      additional_dependencies:
+        - types-attrs
+        - types-requests
+        - attrs
+        - requests
+        - selenium
+        - pytest
