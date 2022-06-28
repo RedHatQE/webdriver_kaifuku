@@ -8,7 +8,8 @@ from typing import ClassVar
 from urllib.error import URLError
 from urllib.parse import urlparse
 
-import attr
+from attrs import define
+from attrs import field
 from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import WebDriverException
@@ -36,7 +37,7 @@ def _get_browser_name(webdriver_kwargs: dict) -> str:
     raise ValueError("No browser name specified")
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class BrowserFactory:
     ALLOWED_KWARGS: ClassVar[list[str]] = ["command_executor", "options", "keep_alive"]
     webdriver_class: type
@@ -70,10 +71,10 @@ class BrowserFactory:
             browser.quit()
 
 
-@attr.s(auto_attribs=True)
+@define(auto_attribs=True)
 class BrowserManager:
     browser_factory: BrowserFactory
-    browser: WebDriver | None = attr.ib(default=None, init=False)
+    browser: WebDriver | None = field(default=None, init=False)
 
     @staticmethod
     def _config_options_for_remote_chrome(browser_conf: dict) -> webdriver.ChromeOptions:
