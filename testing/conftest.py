@@ -17,6 +17,14 @@ CONFIGS = [
                 "desired_capabilities": {
                     "browserName": "firefox",
                     "acceptInsecureCerts": True,
+                    "firefoxOptions": {
+                        "prefs": {
+                            "privacy.trackingprotection.enabled": False,
+                            "browser.contentblocking.enabled": False,
+                            "browser.privatebrowsing.autostart": True,
+                        },
+                        "args": ['-private'],
+                    },
                 },
             },
         },

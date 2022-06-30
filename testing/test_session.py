@@ -28,6 +28,11 @@ def test_session(test_data: tuple[BrowserManager, str], selenium_container: str)
             "proxyType": "MANUAL",
             "sslProxy": "example.com:8080",
         }
+        assert driver.caps["firefoxOptions"]["prefs"] == {
+            "privacy.trackingprotection.enabled": False,
+            "browser.contentblocking.enabled": False,
+            "browser.privatebrowsing.autostart": True,
+        }
     if browser_name == "chrome":
         driver.caps["goog:loggingPrefs"] == {"browser": "INFO", "performance": "ALL"}
         ps = subprocess.run(
