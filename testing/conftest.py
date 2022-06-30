@@ -23,7 +23,7 @@ CONFIGS = [
                             "browser.contentblocking.enabled": False,
                             "browser.privatebrowsing.autostart": True,
                         },
-                        "args": ['-private'],
+                        "args": ["-private"],
                     },
                 },
             },
