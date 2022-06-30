@@ -100,6 +100,17 @@ class BrowserManager:
         desired_capabilities = browser_conf.get("webdriver_options", {}).get(
             "desired_capabilities", {}
         )
+        desired_capabilities_firefox_options = desired_capabilities.pop("firefoxOptions", {})
+        firefox_prefs = desired_capabilities_firefox_options.get("prefs", [])
+        for pref, value in firefox_prefs.items():
+            if pref not in opts.arguments:
+                opts.set_preference(pref, value)
+
+        firefox_args = desired_capabilities_firefox_options.get("args", [])
+        for arg in firefox_args:
+            if arg not in opts.arguments:
+                opts.add_argument(arg)
+
         for key, value in desired_capabilities.items():
             opts.set_capability(key, value)
         if "proxy_url" in browser_conf:
