@@ -101,7 +101,7 @@ class BrowserManager:
         desired_capabilities = browser_conf.get("webdriver_options", {}).get(
             "desired_capabilities", {}
         )
-        desired_capabilities_firefox_options = desired_capabilities.pop("firefoxOptions", {})
+        desired_capabilities_firefox_options = desired_capabilities.get("firefoxOptions", {})
         firefox_prefs = desired_capabilities_firefox_options.get("prefs", {})
         for pref, value in firefox_prefs.items():
             if pref not in opts.arguments:
