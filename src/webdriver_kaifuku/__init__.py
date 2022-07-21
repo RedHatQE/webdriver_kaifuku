@@ -84,9 +84,10 @@ class BrowserManager:
         )
         desired_capabilities_chrome_options = desired_capabilities.pop("chromeOptions", {})
         chrome_args = desired_capabilities_chrome_options.get("args", [])
-        for arg in chrome_args:
-            if arg not in opts.arguments:
-                opts.add_argument(arg)
+        if chrome_args is not None:
+            for arg in chrome_args:
+                if arg not in opts.arguments:
+                    opts.add_argument(arg)
         opts.add_argument("--no-sandbox")
         if "proxy_url" in browser_conf:
             opts.add_argument(f"--proxy-server={browser_conf['proxy_url']}")
@@ -107,12 +108,16 @@ class BrowserManager:
                 opts.set_preference(pref, value)
 
         firefox_args = desired_capabilities_firefox_options.get("args", [])
-        for arg in firefox_args:
-            if arg not in opts.arguments:
-                opts.add_argument(arg)
+        if firefox_args is not None:
+            for arg in firefox_args:
+                if arg not in opts.arguments:
+                    opts.add_argument(arg)
 
         for key, value in desired_capabilities.items():
-            opts.set_capability(key, value)
+            if key == "firefoxOptions":
+                opts.set_capability(key, value)
+            else:
+                opts.set_capability(key, value)
         if "proxy_url" in browser_conf:
             opts.set_capability(
                 "proxy",
@@ -146,7 +151,7 @@ class BrowserManager:
         if browser_name == "firefox":
             webdriver_kwargs["options"] = cls._config_options_for_remote_firefox(browser_conf)
 
-        if webdriver_class == webdriver.Remote and "command_executor" in browser_conf:
+        if webdriver_class in TRUSTED_WEB_DRIVERS and "command_executor" in browser_conf:
             webdriver_kwargs["command_executor"] = browser_conf["command_executor"]
         return cls(BrowserFactory(webdriver_class, webdriver_kwargs))
 
