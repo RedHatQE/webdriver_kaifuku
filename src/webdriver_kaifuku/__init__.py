@@ -13,6 +13,7 @@ from attrs import field
 from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import WebDriverException
+from selenium.webdriver.common.options import ArgOptions
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from selenium.webdriver.remote.webdriver import WebDriver
 
@@ -31,7 +32,15 @@ def _get_browser_name(webdriver_kwargs: dict) -> str:
     """
     Extract the name of the browser from the desired capabilities
     """
-    name = webdriver_kwargs.get("desired_capabilities", {}).get("browserName")
+    # Options is an Object with "to_capabilities" as a method
+
+    name_from_options = (
+        webdriver_kwargs.get("options", ArgOptions()).to_capabilities().get("browserName")
+    )
+    name_from_desired_capabilities = webdriver_kwargs.get("desired_capabilities", {}).get(
+        "browserName"
+    )
+    name = name_from_options or name_from_desired_capabilities
     if name:
         return name.lower()
     raise ValueError("No browser name specified")
