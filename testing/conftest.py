@@ -16,65 +16,73 @@ _CHROME_OPTIONS.add_argument("--disable-application-cache")
 
 CONFIGS = [
     pytest.param(
-        {
-            "expected_browser_name": "firefox",
-            "webdriver": "Remote",
-            "proxy_url": "http://example.com:8080",
-            "webdriver_options": {
-                "command_executor": "http://127.0.0.1:4444",
-                "desired_capabilities": {
-                    "browserName": "firefox",
-                    "acceptInsecureCerts": True,
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "desired_capabilities": {
+                        "browserName": "firefox",
+                        "acceptInsecureCerts": True,
+                    },
                 },
             },
-        },
+            "firefox",
+        ),
         id="remote-firefox",
     ),
     pytest.param(
-        {
-            "expected_browser_name": "chrome",
-            "webdriver": "Remote",
-            "proxy_url": "http://example.com:8080",
-            "webdriver_options": {
-                "command_executor": "http://127.0.0.1:4444",
-                "desired_capabilities": {
-                    "browserName": "chrome",
-                    "acceptInsecureCerts": True,
-                    "chromeOptions": {
-                        "args": ["--disable-application-cache"],
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "desired_capabilities": {
+                        "browserName": "chrome",
+                        "acceptInsecureCerts": True,
+                        "chromeOptions": {
+                            "args": ["--disable-application-cache"],
+                        },
+                        "goog:loggingPrefs": {"browser": "INFO", "performance": "ALL"},
                     },
-                    "goog:loggingPrefs": {"browser": "INFO", "performance": "ALL"},
                 },
             },
-        },
+            "chrome",
+        ),
         id="remote-chrome",
     ),
     pytest.param(
-        {
-            "expected_browser_name": "firefox",
-            "webdriver": "Remote",
-            "proxy_url": "http://example.com:8080",
-            "webdriver_options": {
-                "command_executor": "http://127.0.0.1:4444",
-                "options": FirefoxOptions(),
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "options": FirefoxOptions(),
+                },
             },
-        },
+            "firefox",
+        ),
         id="remote-firefox-options",
     ),
     pytest.param(
-        {
-            "expected_browser_name": "chrome",
-            "webdriver": "Remote",
-            "proxy_url": "http://example.com:8080",
-            "webdriver_options": {
-                "command_executor": "http://127.0.0.1:4444",
-                "options": _CHROME_OPTIONS,
-                "desired_capabilities": {
-                    "browserName": "chrome",
-                    "goog:loggingPrefs": {"browser": "INFO", "performance": "ALL"},
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "options": _CHROME_OPTIONS,
+                    "desired_capabilities": {
+                        "browserName": "chrome",
+                        "goog:loggingPrefs": {"browser": "INFO", "performance": "ALL"},
+                    },
                 },
             },
-        },
+            "chrome",
+        ),
         id="remote-chrome-options",
     ),
 ]
@@ -105,12 +113,9 @@ def selenium_container():
 def test_data(selenium_container, request: pytest.FixtureRequest):
     from webdriver_kaifuku import BrowserManager, log
 
-    parameters = request.param  # type: ignore
-    browser_name = parameters.pop("expected_browser_name")
+    config, browser_name = request.param  # type: ignore
 
-    mgr = BrowserManager.from_conf(parameters)  # type: ignore
+    mgr = BrowserManager.from_conf(config)  # type: ignore
     log.warning(mgr)
     with contextlib.closing(mgr) as mgr:
         yield mgr, browser_name
-
-    parameters["expected_browser_name"] = browser_name
