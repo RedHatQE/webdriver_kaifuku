@@ -88,7 +88,7 @@ class BrowserManager:
 
     @staticmethod
     def _config_options_for_remote_chrome(browser_conf: dict) -> webdriver.ChromeOptions:
-        opts = webdriver.ChromeOptions()
+        opts = browser_conf.get("options", webdriver.ChromeOptions())
         desired_capabilities = browser_conf.get("webdriver_options", {}).get(
             "desired_capabilities", {}
         )
@@ -106,7 +106,7 @@ class BrowserManager:
 
     @staticmethod
     def _config_options_for_remote_firefox(browser_conf: dict) -> webdriver.FirefoxOptions:
-        opts = webdriver.FirefoxOptions()
+        opts = browser_conf.get("options", webdriver.FirefoxOptions())
         desired_capabilities = browser_conf.get("webdriver_options", {}).get(
             "desired_capabilities", {}
         )
