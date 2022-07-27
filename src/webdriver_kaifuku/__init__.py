@@ -13,7 +13,6 @@ from attrs import field
 from selenium import webdriver
 from selenium.common.exceptions import UnexpectedAlertPresentException
 from selenium.common.exceptions import WebDriverException
-from selenium.webdriver.common.options import ArgOptions
 from selenium.webdriver.remote.file_detector import UselessFileDetector
 from selenium.webdriver.remote.webdriver import WebDriver
 
@@ -35,7 +34,9 @@ def _get_browser_name(webdriver_kwargs: dict) -> str:
     # Options is an Object with "to_capabilities" as a method
 
     name_from_options = (
-        webdriver_kwargs.get("options", ArgOptions()).to_capabilities().get("browserName")
+        webdriver_kwargs["options"].to_capabilities().get("browserName")
+        if "options" in webdriver_kwargs
+        else None
     )
     name_from_desired_capabilities = webdriver_kwargs.get("desired_capabilities", {}).get(
         "browserName"
