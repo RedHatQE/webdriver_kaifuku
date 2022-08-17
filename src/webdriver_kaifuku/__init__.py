@@ -27,11 +27,16 @@ BROWSER_ERRORS = URLError, WebDriverException
 TRUSTED_WEB_DRIVERS = [webdriver.Firefox, webdriver.Chrome, webdriver.Remote]
 
 
-def _get_browser_name(webdriver_kwargs: dict) -> str:
+def _get_browser_name(webdriver_kwargs: dict, webdriver_name: str) -> str:
     """
     Extract the name of the browser from the desired capabilities
     """
-    name = webdriver_kwargs.get("desired_capabilities", {}).get("browserName")
+    name = (
+        webdriver_kwargs.get("desired_capabilities", {}).get("browserName")
+        if webdriver_name.lower() == "remote"
+        else webdriver_name
+    )
+
     if name:
         return name.lower()
     raise ValueError("No browser name specified")
@@ -124,15 +129,15 @@ class BrowserManager:
             log.warning(f"Untrusted webdriver {webdriver_name}, may cause failure.")
 
         webdriver_kwargs = browser_conf.get("webdriver_options", {})
-        browser_name = _get_browser_name(webdriver_kwargs)
+        browser_name = _get_browser_name(webdriver_kwargs, webdriver_name)
 
         if "proxy_url" in browser_conf:
             parsed_url = urlparse(browser_conf["proxy_url"])
             proxy_netloc = parsed_url.netloc or parsed_url.path
             browser_conf["proxy_url"] = proxy_netloc
-        if browser_name == "chrome":
+        if browser_name == "chrome" and webdriver_class == webdriver.Remote:
             webdriver_kwargs["options"] = cls._config_options_for_remote_chrome(browser_conf)
-        if browser_name == "firefox":
+        if browser_name == "firefox" and webdriver_class == webdriver.Remote:
             webdriver_kwargs["options"] = cls._config_options_for_remote_firefox(browser_conf)
 
         if webdriver_class == webdriver.Remote and "command_executor" in browser_conf:
