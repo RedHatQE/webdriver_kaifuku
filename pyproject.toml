@@ -43,5 +43,6 @@ packages = ["/src/webdriver_kaifuku"]
 
 [tool.hatch.version]
 raw-options.version_scheme = "calver-by-date"
-raw-options.normalize = false
+# re-enable after fixing https://github.com/pypa/setuptools_scm/issues/768
+# raw-options.normalize = false
 source = "vcs"
