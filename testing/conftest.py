@@ -13,6 +13,13 @@ _CHROME_OPTIONS = ChromeOptions()
 _CHROME_OPTIONS.set_capability("acceptInsecureCerts", True)
 _CHROME_OPTIONS.add_argument("--disable-application-cache")
 
+_FIREFOX_OPTIONS = FirefoxOptions()
+_FIREFOX_OPTIONS.set_capability("acceptInsecureCerts", True)
+_FIREFOX_OPTIONS.set_preference("privacy.trackingprotection.enabled", False)
+_FIREFOX_OPTIONS.set_preference("browser.contentblocking.enabled", False)
+_FIREFOX_OPTIONS.set_preference("browser.privatebrowsing.autostart", True)
+_FIREFOX_OPTIONS.add_argument("-private")
+
 
 CONFIGS = [
     pytest.param(
@@ -25,6 +32,14 @@ CONFIGS = [
                     "desired_capabilities": {
                         "browserName": "firefox",
                         "acceptInsecureCerts": True,
+                        "firefoxOptions": {
+                            "prefs": {
+                                "privacy.trackingprotection.enabled": False,
+                                "browser.contentblocking.enabled": False,
+                                "browser.privatebrowsing.autostart": True,
+                            },
+                            "args": ["-private"],
+                        },
                     },
                 },
             },
@@ -60,7 +75,7 @@ CONFIGS = [
                 "proxy_url": "http://example.com:8080",
                 "webdriver_options": {
                     "command_executor": "http://127.0.0.1:4444",
-                    "options": FirefoxOptions(),
+                    "options": _FIREFOX_OPTIONS,
                 },
             },
             "firefox",
