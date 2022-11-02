@@ -31,12 +31,18 @@ def _get_browser_name(webdriver_kwargs: dict, webdriver_name: str) -> str:
     """
     Extract the name of the browser from the desired capabilities
     """
-    name = (
-        webdriver_kwargs.get("desired_capabilities", {}).get("browserName")
-        if webdriver_name.lower() == "remote"
-        else webdriver_name
-    )
-
+    if webdriver_name.lower() == "remote":
+        name_from_options = (
+            webdriver_kwargs["options"].to_capabilities().get("browserName")
+            if "options" in webdriver_kwargs
+            else None
+        )
+        name_from_desired_capabilities = webdriver_kwargs.get("desired_capabilities", {}).get(
+            "browserName"
+        )
+        name = name_from_options or name_from_desired_capabilities
+    else:
+        name = webdriver_name
     if name:
         return name.lower()
     raise ValueError("No browser name specified")
@@ -83,7 +89,7 @@ class BrowserManager:
 
     @staticmethod
     def _config_options_for_remote_chrome(browser_conf: dict) -> webdriver.ChromeOptions:
-        opts = webdriver.ChromeOptions()
+        opts = browser_conf.get("webdriver_options", {}).get("options", webdriver.ChromeOptions())
         desired_capabilities = browser_conf.get("webdriver_options", {}).get(
             "desired_capabilities", {}
         )
@@ -102,7 +108,7 @@ class BrowserManager:
 
     @staticmethod
     def _config_options_for_remote_firefox(browser_conf: dict) -> webdriver.FirefoxOptions:
-        opts = webdriver.FirefoxOptions()
+        opts = browser_conf.get("webdriver_options", {}).get("options", webdriver.FirefoxOptions())
         desired_capabilities = browser_conf.get("webdriver_options", {}).get(
             "desired_capabilities", {}
         )

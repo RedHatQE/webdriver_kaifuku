@@ -3,50 +3,102 @@ import subprocess
 from urllib.request import urlopen
 
 import pytest
+from selenium.webdriver.chrome.options import Options as ChromeOptions
+from selenium.webdriver.firefox.options import Options as FirefoxOptions
 from wait_for import wait_for
 
 BROWSER_IMAGE = "quay.io/redhatqe/selenium-standalone:latest"
 
+_CHROME_OPTIONS = ChromeOptions()
+_CHROME_OPTIONS.set_capability("acceptInsecureCerts", True)
+_CHROME_OPTIONS.add_argument("--disable-application-cache")
+
+_FIREFOX_OPTIONS = FirefoxOptions()
+_FIREFOX_OPTIONS.set_capability("acceptInsecureCerts", True)
+_FIREFOX_OPTIONS.set_preference("privacy.trackingprotection.enabled", False)
+_FIREFOX_OPTIONS.set_preference("browser.contentblocking.enabled", False)
+_FIREFOX_OPTIONS.set_preference("browser.privatebrowsing.autostart", True)
+_FIREFOX_OPTIONS.add_argument("-private")
+
+
 CONFIGS = [
     pytest.param(
-        {
-            "webdriver": "Remote",
-            "proxy_url": "http://example.com:8080",
-            "webdriver_options": {
-                "command_executor": "http://127.0.0.1:4444",
-                "desired_capabilities": {
-                    "browserName": "firefox",
-                    "acceptInsecureCerts": True,
-                    "firefoxOptions": {
-                        "prefs": {
-                            "privacy.trackingprotection.enabled": False,
-                            "browser.contentblocking.enabled": False,
-                            "browser.privatebrowsing.autostart": True,
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "desired_capabilities": {
+                        "browserName": "firefox",
+                        "acceptInsecureCerts": True,
+                        "firefoxOptions": {
+                            "prefs": {
+                                "privacy.trackingprotection.enabled": False,
+                                "browser.contentblocking.enabled": False,
+                                "browser.privatebrowsing.autostart": True,
+                            },
+                            "args": ["-private"],
                         },
-                        "args": ["-private"],
                     },
                 },
             },
-        },
+            "firefox",
+        ),
         id="remote-firefox",
     ),
     pytest.param(
-        {
-            "webdriver": "Remote",
-            "proxy_url": "http://example.com:8080",
-            "webdriver_options": {
-                "command_executor": "http://127.0.0.1:4444",
-                "desired_capabilities": {
-                    "browserName": "chrome",
-                    "acceptInsecureCerts": True,
-                    "chromeOptions": {
-                        "args": ["--disable-application-cache"],
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "desired_capabilities": {
+                        "browserName": "chrome",
+                        "acceptInsecureCerts": True,
+                        "chromeOptions": {
+                            "args": ["--disable-application-cache"],
+                        },
+                        "goog:loggingPrefs": {"browser": "INFO", "performance": "ALL"},
                     },
-                    "goog:loggingPrefs": {"browser": "INFO", "performance": "ALL"},
                 },
             },
-        },
+            "chrome",
+        ),
         id="remote-chrome",
+    ),
+    pytest.param(
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "options": _FIREFOX_OPTIONS,
+                },
+            },
+            "firefox",
+        ),
+        id="remote-firefox-options",
+    ),
+    pytest.param(
+        (
+            {
+                "webdriver": "Remote",
+                "proxy_url": "http://example.com:8080",
+                "webdriver_options": {
+                    "command_executor": "http://127.0.0.1:4444",
+                    "options": _CHROME_OPTIONS,
+                    "desired_capabilities": {
+                        "browserName": "chrome",
+                        "goog:loggingPrefs": {"browser": "INFO", "performance": "ALL"},
+                    },
+                },
+            },
+            "chrome",
+        ),
+        id="remote-chrome-options",
     ),
 ]
 
@@ -76,10 +128,9 @@ def selenium_container():
 def test_data(selenium_container, request: pytest.FixtureRequest):
     from webdriver_kaifuku import BrowserManager, log
 
-    mgr = BrowserManager.from_conf(request.param)  # type: ignore
-    browser_name = request.param["webdriver_options"]["desired_capabilities"][  # type: ignore
-        "browserName"
-    ]
+    config, browser_name = request.param  # type: ignore
+
+    mgr = BrowserManager.from_conf(config)  # type: ignore
     log.warning(mgr)
     with contextlib.closing(mgr) as mgr:
         yield mgr, browser_name
