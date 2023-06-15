@@ -35,7 +35,7 @@ def test_session(test_data: tuple[BrowserManager, str], selenium_container: str)
         }
         assert manager.browser_factory.webdriver_kwargs["options"].arguments == ["-private"]
     if browser_name == "chrome":
-        driver.caps["goog:loggingPrefs"] == {"browser": "INFO", "performance": "ALL"}
+        assert driver.caps["goog:loggingPrefs"] == {"browser": "INFO", "performance": "ALL"}
         ps = subprocess.run(
             [
                 "podman",
