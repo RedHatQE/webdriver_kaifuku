@@ -29,7 +29,7 @@ TRUSTED_WEB_DRIVERS = [webdriver.Firefox, webdriver.Chrome, webdriver.Remote]
 
 def _get_browser_name(webdriver_kwargs: dict, webdriver_name: str) -> str:
     """
-    Extract the name of the browser from the desired capabilities
+    Extract the name of the browser from the browser config
     """
     if webdriver_name.lower() == "remote":
         name_from_options = (
@@ -46,6 +46,23 @@ def _get_browser_name(webdriver_kwargs: dict, webdriver_name: str) -> str:
     if name:
         return name.lower()
     raise ValueError("No browser name specified")
+
+
+def _remove_deprecated_items(browser_conf: dict) -> dict:
+    """
+    Remove deprecated items from browser config
+    """
+    deprecated_items = ["perfLoggingPrefs", "marionette"]
+    opts = browser_conf.get("webdriver_options", {})
+    if opts and "desired_capabilities" in opts:
+        for i in deprecated_items:
+            if i in opts["desired_capabilities"]:
+                log.warning(
+                    f"'{i}' capability has been deprecated in Selenium 4.10. "
+                    f"Remove it from your browser config"
+                )
+                del browser_conf["webdriver_options"]["desired_capabilities"][i]
+    return browser_conf
 
 
 @define(auto_attribs=True)
@@ -90,45 +107,40 @@ class BrowserManager:
     @staticmethod
     def _config_options_for_remote_chrome(browser_conf: dict) -> webdriver.ChromeOptions:
         opts = browser_conf.get("webdriver_options", {}).get("options", webdriver.ChromeOptions())
-        desired_capabilities = browser_conf.get("webdriver_options", {}).get(
-            "desired_capabilities", {}
-        )
-        desired_capabilities_chrome_options = desired_capabilities.pop("chromeOptions", {})
-        chrome_args = desired_capabilities_chrome_options.get("args", [])
-        if chrome_args is not None:
+        chrome_options = browser_conf.get("webdriver_options", {}).get("desired_capabilities", {})
+        additional_chrome_opts = chrome_options.pop("chromeOptions", {})
+
+        chrome_args = additional_chrome_opts.get("args", [])
+        if chrome_args:
             for arg in chrome_args:
                 if arg not in opts.arguments:
                     opts.add_argument(arg)
         opts.add_argument("--no-sandbox")
         if "proxy_url" in browser_conf:
             opts.add_argument(f"--proxy-server={browser_conf['proxy_url']}")
-        for key, value in desired_capabilities.items():
+        for key, value in chrome_options.items():
             opts.set_capability(key, value)
         return opts
 
     @staticmethod
     def _config_options_for_remote_firefox(browser_conf: dict) -> webdriver.FirefoxOptions:
         opts = browser_conf.get("webdriver_options", {}).get("options", webdriver.FirefoxOptions())
-        desired_capabilities = browser_conf.get("webdriver_options", {}).get(
-            "desired_capabilities", {}
-        )
-        desired_capabilities_firefox_options = desired_capabilities.get("firefoxOptions", {})
-        firefox_prefs = desired_capabilities_firefox_options.get("prefs", {})
-        for pref, value in firefox_prefs.items():
-            if pref not in opts.arguments:
-                opts.set_preference(pref, value)
+        firefox_options = browser_conf.get("webdriver_options", {}).get("desired_capabilities", {})
+        additional_firefox_opts = firefox_options.pop("firefoxOptions", {})
 
-        firefox_args = desired_capabilities_firefox_options.get("args", [])
-        if firefox_args is not None:
+        firefox_args = additional_firefox_opts.get("args", [])
+        if firefox_args:
             for arg in firefox_args:
                 if arg not in opts.arguments:
                     opts.add_argument(arg)
 
-        for key, value in desired_capabilities.items():
-            if key == "firefoxOptions":
-                opts.set_capability(key, value)
-            else:
-                opts.set_capability(key, value)
+        firefox_prefs = additional_firefox_opts.get("prefs", {})
+        for pref, value in firefox_prefs.items():
+            if pref not in opts.arguments:
+                opts.set_preference(pref, value)
+
+        for key, value in firefox_options.items():
+            opts.set_capability(key, value)
         if "proxy_url" in browser_conf:
             opts.set_capability(
                 "proxy",
@@ -143,8 +155,10 @@ class BrowserManager:
     @classmethod
     def from_conf(cls, browser_conf: dict) -> BrowserManager:
         browser_conf = copy(browser_conf)
+        browser_conf = _remove_deprecated_items(browser_conf)
+
         log.debug(browser_conf)
-        webdriver_name = browser_conf.get("webdriver", "Firefox").title()
+        webdriver_name = browser_conf.get("webdriver", "Chrome").title()
         webdriver_class = getattr(webdriver, webdriver_name)
 
         if webdriver_class not in TRUSTED_WEB_DRIVERS:
