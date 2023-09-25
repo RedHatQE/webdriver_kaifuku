@@ -105,7 +105,7 @@ class BrowserManager:
     browser: WebDriver | None = field(default=None, init=False)
 
     @staticmethod
-    def _config_options_for_remote_chrome(browser_conf: dict) -> webdriver.ChromeOptions:
+    def _config_options_for_chrome(browser_conf: dict) -> webdriver.ChromeOptions:
         opts = browser_conf.get("webdriver_options", {}).get("options", webdriver.ChromeOptions())
         chrome_options = browser_conf.get("webdriver_options", {}).get("desired_capabilities", {})
         additional_chrome_opts = chrome_options.pop("chromeOptions", {})
@@ -115,7 +115,6 @@ class BrowserManager:
             for arg in chrome_args:
                 if arg not in opts.arguments:
                     opts.add_argument(arg)
-        opts.add_argument("--no-sandbox")
         if "proxy_url" in browser_conf:
             opts.add_argument(f"--proxy-server={browser_conf['proxy_url']}")
         for key, value in chrome_options.items():
@@ -123,7 +122,7 @@ class BrowserManager:
         return opts
 
     @staticmethod
-    def _config_options_for_remote_firefox(browser_conf: dict) -> webdriver.FirefoxOptions:
+    def _config_options_for_firefox(browser_conf: dict) -> webdriver.FirefoxOptions:
         opts = browser_conf.get("webdriver_options", {}).get("options", webdriver.FirefoxOptions())
         firefox_options = browser_conf.get("webdriver_options", {}).get("desired_capabilities", {})
         additional_firefox_opts = firefox_options.pop("firefoxOptions", {})
@@ -171,10 +170,13 @@ class BrowserManager:
             parsed_url = urlparse(browser_conf["proxy_url"])
             proxy_netloc = parsed_url.netloc or parsed_url.path
             browser_conf["proxy_url"] = proxy_netloc
-        if browser_name == "chrome" and webdriver_class == webdriver.Remote:
-            webdriver_kwargs["options"] = cls._config_options_for_remote_chrome(browser_conf)
-        if browser_name == "firefox" and webdriver_class == webdriver.Remote:
-            webdriver_kwargs["options"] = cls._config_options_for_remote_firefox(browser_conf)
+        if browser_name == "chrome":
+            opts = cls._config_options_for_chrome(browser_conf)
+            if webdriver_class == webdriver.Remote:
+                opts.add_argument("--no-sandbox")
+            webdriver_kwargs["options"] = opts
+        if browser_name == "firefox":
+            webdriver_kwargs["options"] = cls._config_options_for_firefox(browser_conf)
 
         if webdriver_class in TRUSTED_WEB_DRIVERS and "command_executor" in browser_conf:
             webdriver_kwargs["command_executor"] = browser_conf["command_executor"]
