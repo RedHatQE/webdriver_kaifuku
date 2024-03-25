@@ -144,7 +144,7 @@ class BrowserManager:
             opts.set_capability(
                 "proxy",
                 {
-                    "proxyType": "MANUAL",
+                    "proxyType": "manual",
                     "httpProxy": browser_conf["proxy_url"],
                     "sslProxy": browser_conf["proxy_url"],
                 },
