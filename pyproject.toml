@@ -17,6 +17,10 @@ license_file = "LICENSE"
 name = "webdriver_kaifuku"
 readme = "README.md"
 requires-python = ">=3.8"
+maintainers = [
+  {name="Ronny Pfannschmidt", email="rpfannsc@redhat.com"},
+  {name="Nikhil Dhandre", email="ndhandre@redhat.com"},
+]
 
 dependencies = [
   "attrs",
