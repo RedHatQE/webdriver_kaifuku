@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-
 from webdriver_kaifuku import BrowserManager
 
 
@@ -54,4 +53,4 @@ def test_initializing_from_config(conf: dict, browser_name: str):
     assert options.capabilities.get("acceptInsecureCerts") is True
     assert options.arguments == ["foo"]
     if browser_name == "firefox":
-        assert options.preferences == {'bar': False}
+        assert options.preferences == {"bar": False}

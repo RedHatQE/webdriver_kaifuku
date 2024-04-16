@@ -12,14 +12,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
-    - name: Checkout to master
-      uses: actions/checkout@v3
+    - name: Checkout to main
+      uses: actions/checkout@v4
 
     - name: Set up Python-${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
 
@@ -33,10 +33,11 @@ jobs:
         pytest -v testing/
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3.1.0
+      uses: codecov/codecov-action@v4
       with:
         files: coverage.xml
         flags: unittests
+        token: ${{ secrets.CODECOV_TOKEN }}
         name: codecov-kaifuku-py-${{ matrix.python-version }}
 
   package:
@@ -44,13 +45,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout to master
-        uses: actions/checkout@v3
+      - name: Checkout to main
+        uses: actions/checkout@v4
 
       - name: Setup python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.x'
           architecture: 'x64'
 
       - name: Build and verify with twine
