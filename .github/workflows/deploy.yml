@@ -3,7 +3,7 @@ name: 🐍  Publish to PyPI
 on:
   push:
     branches:
-      - master
+      - main
     tags:
       - '*'
 
@@ -13,13 +13,13 @@ jobs:
     if: startsWith(github.event.ref, 'refs/tags')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout to master
-        uses: actions/checkout@v3
+      - name: Checkout to main
+        uses: actions/checkout@v4
 
       - name: Setup python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: '3.'
           architecture: 'x64'
 
       - name: Build a package and check
@@ -29,17 +29,4 @@ jobs:
           python -m twine check dist/*
 
       - name: Deploy to PyPI
-        uses: pypa/gh-action-pypi-publish@v1.4.1
-        with:
-          user: __token__
-          password: ${{ secrets.pypi_token }}
-
-      - name: Create a release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: false
-          prerelease: false
+        uses: pypa/gh-action-pypi-publish@release/v1

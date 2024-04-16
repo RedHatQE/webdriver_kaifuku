@@ -5,6 +5,8 @@ classifiers = [
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Topic :: Software Development :: Quality Assurance",
   "Topic :: Software Development :: Testing",
 ]
@@ -29,7 +31,7 @@ test = [
 ]
 
 [project.urls]
-repository = "https://github.com/RonnyPfannschmidt/webdriver_kaifuku"
+repository = "https://github.com/RedHatQE/webdriver_kaifuku"
 
 [build-system]
 build-backend = "hatchling.build"
