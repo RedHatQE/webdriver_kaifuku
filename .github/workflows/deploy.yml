@@ -12,6 +12,11 @@ jobs:
     name: Build and publish Python 🐍 distributions to PyPI
     if: startsWith(github.event.ref, 'refs/tags')
     runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/webdriver-kaifuku
+    permissions:
+      id-token: write  # This permission is mandatory for trusted publishing
     steps:
       - name: Checkout to main
         uses: actions/checkout@v4
@@ -19,7 +24,7 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.'
+          python-version: '3.x'
           architecture: 'x64'
 
       - name: Build a package and check
