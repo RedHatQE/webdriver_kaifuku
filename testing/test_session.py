@@ -29,7 +29,7 @@ def test_session(test_data: tuple[BrowserManager, str], selenium_container: str)
             "sslProxy": "example.com:8080",
         }
         assert manager.browser_factory.webdriver_kwargs["options"].preferences == {
-            "remote.active-protocols": 3,
+            "remote.active-protocols": 1,
             "privacy.trackingprotection.enabled": False,
             "browser.contentblocking.enabled": False,
             "browser.privatebrowsing.autostart": True,

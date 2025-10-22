@@ -91,7 +91,15 @@ class BrowserFactory:
                 raise
 
         browser.file_detector = UselessFileDetector()
-        browser.maximize_window()
+
+        # Only maximize in headed mode - headless mode should respect window-size arg
+        if not (
+            (options := self.webdriver_kwargs.get("options"))
+            and hasattr(options, "arguments")
+            and any(arg.startswith("--headless") or arg == "-headless" for arg in options.arguments)
+        ):
+            browser.maximize_window()
+
         return browser
 
     def close(self, browser: WebDriver | None) -> None:

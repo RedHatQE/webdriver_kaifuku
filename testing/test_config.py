@@ -53,4 +53,4 @@ def test_initializing_from_config(conf: dict, browser_name: str):
     assert options.capabilities.get("acceptInsecureCerts") is True
     assert options.arguments == ["foo"]
     if browser_name == "firefox":
-        assert options.preferences == {"remote.active-protocols": 3, "bar": False}
+        assert options.preferences == {"remote.active-protocols": 1, "bar": False}
